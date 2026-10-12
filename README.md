@@ -69,5 +69,5 @@ Open http://localhost:3000, which redirects to the demo campaign. The Nuxt serve
 npm test                          # Vitest component tests
 npm run typecheck
 npx playwright install chromium   # once
-npm run test:e2e                  # Playwright smoke test with the API mocked
+npm run test:e2e                  # Playwright tests with the API mocked
 ```

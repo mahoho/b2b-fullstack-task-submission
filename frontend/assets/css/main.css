@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+/* Tailwind 4's preflight leaves buttons on the default arrow. Enabled controls get the pointer, disabled ones not-allowed. */
+@layer base {
+  button:not(:disabled),
+  input[type="range"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
