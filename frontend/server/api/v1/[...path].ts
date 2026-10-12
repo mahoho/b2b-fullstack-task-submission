@@ -7,6 +7,10 @@ export default defineEventHandler((event) => {
 
   const { apiBase, apiToken } = useRuntimeConfig(event)
 
+  if (!apiBase || !apiToken) {
+    throw createError({ statusCode: 500, statusMessage: 'NUXT_API_BASE and NUXT_API_TOKEN must be set' })
+  }
+
   return proxyRequest(event, apiBase + event.path, {
     headers: { Authorization: `Bearer ${apiToken}` },
   })

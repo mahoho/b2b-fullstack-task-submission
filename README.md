@@ -40,10 +40,11 @@ With the backend running:
 cd frontend
 nvm use
 npm ci
+cp .env.example .env
 npm run dev
 ```
 
-Open http://localhost:3000, which redirects to the demo campaign. The Nuxt server proxies the two API calls the page makes to `NUXT_API_BASE` (default `http://127.0.0.1:8000`) and adds the `NUXT_API_TOKEN` bearer token (default `demo-partner-token`), so the token never reaches the browser.
+Open http://localhost:3000, which redirects to the demo campaign. The Nuxt server proxies the two API calls the page makes to `NUXT_API_BASE` and adds the `NUXT_API_TOKEN` bearer token, so the token never reaches the browser. Both are read from `frontend/.env` (git-ignored); `.env.example` holds the local demo values. There are no defaults in the code, and the proxy answers 500 if either variable is missing. Outside `nuxt dev`, Nuxt does not read `.env` at runtime, so set the two variables in the process environment.
 
 ```bash
 npm test                          # Vitest component tests
