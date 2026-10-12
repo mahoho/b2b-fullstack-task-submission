@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ApplicantStatus } from '~/types/api'
+
 const props = defineProps<{ campaignId: string }>()
 
 const {
@@ -8,6 +10,8 @@ const {
   loadError,
   notFound,
   minScore,
+  status,
+  search,
   page,
   pendingIds,
   actionErrors,
@@ -17,12 +21,21 @@ const {
 
 onMounted(load)
 
+const statusOptions: { value: ApplicantStatus, label: string }[] = [
+  { value: 'pending', label: 'Pending review' },
+  { value: 'shortlisted', label: 'Shortlisted' },
+  { value: 'rejected', label: 'Rejected' },
+]
+
 // Skeletons only for the very first load. Later reloads keep the list in place, so nothing jumps.
 const initialLoading = computed(() => loading.value && !pageMeta.value)
 
-const emptyMessage = computed(() => minScore.value > 0
-  ? `No applicants scored ${minScore.value} or higher.`
-  : 'No applicants yet.')
+const emptyMessage = computed(() => {
+  if (status.value !== '' || search.value.trim() !== '') return 'No applicants match these filters.'
+  return minScore.value > 0
+    ? `No applicants scored ${minScore.value} or higher.`
+    : 'No applicants yet.'
+})
 </script>
 
 <template>
@@ -45,6 +58,42 @@ const emptyMessage = computed(() => minScore.value > 0
         for="min-score"
         class="w-8 text-sm text-gray-900 tabular-nums"
       >{{ minScore }}</output>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4">
+      <label
+        for="status-filter"
+        class="text-sm font-medium text-gray-700"
+      >Status</label>
+      <select
+        id="status-filter"
+        v-model="status"
+        class="rounded-lg px-3 py-1.5 text-sm ring-1 ring-gray-300 ring-inset"
+      >
+        <option value="">
+          All statuses
+        </option>
+        <option
+          v-for="option in statusOptions"
+          :key="option.value"
+          :value="option.value"
+        >
+          {{ option.label }}
+        </option>
+      </select>
+
+      <label
+        for="applicant-search"
+        class="text-sm font-medium text-gray-700"
+      >Search</label>
+      <input
+        id="applicant-search"
+        v-model="search"
+        type="search"
+        maxlength="100"
+        placeholder="Name or email"
+        class="w-64 rounded-lg px-3 py-1.5 text-sm ring-1 ring-gray-300 ring-inset"
+      >
     </div>
 
     <div
@@ -105,7 +154,7 @@ const emptyMessage = computed(() => minScore.value > 0
           :applicant="applicant"
           :pending="pendingIds.has(applicant.id)"
           :error="actionErrors.get(applicant.id) ?? null"
-          @update-status="status => setStatus(applicant.id, status)"
+          @update-status="newStatus => setStatus(applicant.id, newStatus)"
         />
       </li>
     </ul>

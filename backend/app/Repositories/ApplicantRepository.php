@@ -7,6 +7,7 @@ use App\Entities\Applicant;
 use App\Entities\Campaign;
 use App\Entities\Partner;
 use App\Enums\ScoreTier;
+use App\Http\Input\ApplicantSummaryQueryData;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
 
@@ -54,10 +55,10 @@ class ApplicantRepository extends EntityRepository
     /**
      * @return list<Applicant>
      */
-    public function page(Campaign $campaign, ?int $minScore, int $offset, int $limit): array
+    public function page(Campaign $campaign, ApplicantSummaryQueryData $filters, int $offset, int $limit): array
     {
         // Databases disagree on where NULL sorts in DESC order, so unscored applicants are pushed last explicitly.
-        return $this->filtered($campaign, $minScore)
+        return $this->filtered($campaign, $filters)
             ->addSelect('CASE WHEN a.aiScore IS NULL THEN 1 ELSE 0 END AS HIDDEN unscoredLast')
             ->orderBy('unscoredLast', 'ASC')
             ->addOrderBy('a.aiScore', 'DESC')
@@ -69,9 +70,9 @@ class ApplicantRepository extends EntityRepository
             ->getResult();
     }
 
-    public function countFiltered(Campaign $campaign, ?int $minScore): int
+    public function countFiltered(Campaign $campaign, ApplicantSummaryQueryData $filters): int
     {
-        return (int) $this->filtered($campaign, $minScore)
+        return (int) $this->filtered($campaign, $filters)
             ->select('COUNT(a.id)')
             ->getQuery()
             ->getSingleScalarResult();
@@ -90,14 +91,26 @@ class ApplicantRepository extends EntityRepository
             ->getOneOrNullResult();
     }
 
-    private function filtered(Campaign $campaign, ?int $minScore): QueryBuilder
+    private function filtered(Campaign $campaign, ApplicantSummaryQueryData $filters): QueryBuilder
     {
         $query = $this->createQueryBuilder('a')
             ->where('a.campaign = :campaign')
             ->setParameter('campaign', $campaign);
 
-        if ($minScore !== null) {
-            $query->andWhere('a.aiScore >= :minScore')->setParameter('minScore', $minScore);
+        if ($filters->minScore !== null) {
+            $query->andWhere('a.aiScore >= :minScore')->setParameter('minScore', $filters->minScore);
+        }
+
+        if ($filters->status !== null) {
+            $query->andWhere('a.status = :status')->setParameter('status', $filters->status);
+        }
+
+        if ($filters->search !== null) {
+            // '!' is the escape character, so % and _ in the term match themselves. A backslash would clash with MySQL string literals.
+            $term = strtr(mb_strtolower($filters->search), ['!' => '!!', '%' => '!%', '_' => '!_']);
+            $query
+                ->andWhere("(LOWER(a.fullName) LIKE :search ESCAPE '!' OR LOWER(a.email) LIKE :search ESCAPE '!')")
+                ->setParameter('search', '%'.$term.'%');
         }
 
         return $query;
