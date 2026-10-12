@@ -61,7 +61,7 @@ b2b-fullstack-task-submission/
 
 `app/Enums/ScoreTier.php`: backed enum `top`, `eligible`, `below`, `unscored`, with `ScoreTier::for(?int $score, int $eligibilityThreshold)`. Null -> `unscored`, 90 or more -> `top`, at or above the threshold -> `eligible`, otherwise `below`. Constants on the same enum: top tier score 90, top tier highlight limit 3.
 
-Schema is managed by one Doctrine migration in `database/migrations`, written with the DBAL schema API so it runs on SQLite and MySQL alike (`doctrine:migrations:diff` emits platform-specific SQL). After migrating, `doctrine:migrations:diff` must report no changes. The skeleton's Eloquent `User` model, its factory and the default migrations are deleted. The API is stateless: `SESSION_DRIVER=array`, `CACHE_STORE=file`.
+Schema is managed by one Doctrine migration in `database/migrations`, built with the DBAL 4.5 schema editors and created through the platform's SQL (change request #3), so it uses no deprecated DBAL API and runs on SQLite and MySQL alike. Index and foreign key names are the ones Doctrine generates for the mapping. After migrating, `doctrine:migrations:diff` must report no changes, and `MigrationTest` pins both properties. The skeleton's Eloquent `User` model, its factory and the default migrations are deleted. The API is stateless: `SESSION_DRIVER=array`, `CACHE_STORE=file`.
 
 `database/seeders/DatabaseSeeder.php` (uses the EntityManager, Faker for names):
 - Demo partner with token `demo-partner-token` (local only, documented in the README).
