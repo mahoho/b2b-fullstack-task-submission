@@ -231,7 +231,7 @@ Styling is Tailwind utilities in templates. No `<style>` blocks in `.vue` files;
   - View Details toggle (`aria-expanded`) that reveals the email and every highlight.
 - `components/ApplicantReviewBoard.vue` (uses the composable). Props: `campaignId`.
   - Labelled range input "Minimum AI score", 0 to 100, step 5, with the current value shown in an `<output>`.
-  - Loading: 3 skeleton cards (`animate-pulse`), `aria-busy="true"` on the list.
+  - Loading: 3 skeleton cards (`animate-pulse`) on the first load only. Later loads keep the list in place with `aria-busy` and run Nuxt's loading bar from `load()` through `useLoadingIndicator()` (change request #9).
   - Empty: "No applicants yet." at 0, otherwise "No applicants scored {n} or higher."
   - Load error: "Couldn't load applicants." with a Retry button.
   - Prev and Next buttons with "Page X of Y", hidden when there is one page.
@@ -249,6 +249,7 @@ Styling is Tailwind utilities in templates. No `<style>` blocks in `.vue` files;
 
 `tests/nuxt/ApplicantReviewBoard.spec.ts`:
 - Shows skeletons, then the applicants from the mocked endpoint.
+- Keeps the list in place, with no skeletons, while the next page loads.
 - Moving the slider to 80 sends `min_score=80` and the DOM shows only the filtered applicants.
 - Shortlist shows "Shortlisted" before the PATCH resolves.
 - A failing PATCH (500) restores "Pending review" and shows the error.
