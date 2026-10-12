@@ -54,13 +54,14 @@ status: string,
 title: string,
 detail?: string,
 code?: string,
-source?: {
-parameter?: string,
-pointer?: string,
-},
+source?: JsonApiErrorSourceData,
 };
 export type JsonApiErrorDocumentData = {
 errors: JsonApiErrorData[],
+};
+export type JsonApiErrorSourceData = {
+parameter?: string,
+pointer?: string,
 };
 export type LengthAwarePaginator<TKey, TValue> = {
 data: TKey extends string ? Record<TKey, TValue> : TValue[],

@@ -25,11 +25,8 @@ class ApplicantSummaryService
         $applicants = $this->em->getRepository(Applicant::class);
         $threshold = $campaign->getEligibilityThreshold();
 
-        $aggregates = $applicants->aggregates($campaign);
         $summary = ApplicantSummaryData::fromAggregates(
-            $aggregates['total'],
-            $aggregates['eligible'],
-            $aggregates['average'],
+            $applicants->aggregates($campaign),
             array_map(
                 fn (Applicant $applicant) => new TopTierApplicantData($applicant->getId(), $applicant->getFullName(), (int) $applicant->getAiScore()),
                 $applicants->topTier($campaign),

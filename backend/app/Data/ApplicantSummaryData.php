@@ -17,11 +17,15 @@ class ApplicantSummaryData extends Data
     ) {}
 
     /**
-     * @param float|string|null $average AVG() result: null with no scored applicants, a decimal string on MySQL.
      * @param list<TopTierApplicantData> $topTier
      */
-    public static function fromAggregates(int $total, int $eligible, float|string|null $average, array $topTier): self
+    public static function fromAggregates(ApplicantAggregatesData $aggregates, array $topTier): self
     {
-        return new self($total, $eligible, $average === null ? 0.0 : round((float) $average, 1), $topTier);
+        return new self(
+            $aggregates->total,
+            $aggregates->eligible,
+            $aggregates->average === null ? 0.0 : round($aggregates->average, 1),
+            $topTier,
+        );
     }
 }

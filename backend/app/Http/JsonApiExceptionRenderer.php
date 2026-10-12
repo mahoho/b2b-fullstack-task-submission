@@ -4,6 +4,7 @@ namespace App\Http;
 
 use App\Data\JsonApiErrorData;
 use App\Data\JsonApiErrorDocumentData;
+use App\Data\JsonApiErrorSourceData;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,17 +22,24 @@ class JsonApiExceptionRenderer
             return null;
         }
 
-        [$status, $errors, $headers] = match (true) {
-            $e instanceof ValidationException => [422, $this->validationErrors($e), []],
-            $e instanceof AuthenticationException => [
+        return match (true) {
+            $e instanceof ValidationException => $this->respond(422, $this->validationErrors($e)),
+            $e instanceof AuthenticationException => $this->respond(
                 401,
                 [new JsonApiErrorData('401', 'Unauthenticated', 'A valid bearer token is required.')],
                 ['WWW-Authenticate' => 'Bearer'],
-            ],
-            $e instanceof HttpExceptionInterface => [$e->getStatusCode(), [$this->httpError($e)], $e->getHeaders()],
-            default => [500, [new JsonApiErrorData('500', 'Server Error')], []],
+            ),
+            $e instanceof HttpExceptionInterface => $this->respond($e->getStatusCode(), [$this->httpError($e)], $e->getHeaders()),
+            default => $this->respond(500, [new JsonApiErrorData('500', 'Server Error')]),
         };
+    }
 
+    /**
+     * @param list<JsonApiErrorData> $errors
+     * @param array<string, string> $headers
+     */
+    private function respond(int $status, array $errors, array $headers = []): JsonResponse
+    {
         return new JsonResponse(
             (new JsonApiErrorDocumentData($errors))->toArray(),
             $status,
@@ -60,8 +68,8 @@ class JsonApiExceptionRenderer
         foreach ($e->errors() as $key => $messages) {
             foreach ($messages as $message) {
                 $errors[] = match (true) {
-                    str_starts_with($key, 'data.') => new JsonApiErrorData('422', 'Invalid attribute', $message, source: ['pointer' => '/'.str_replace('.', '/', $key)]),
-                    default => new JsonApiErrorData('422', 'Invalid parameter', $message, source: ['parameter' => preg_replace('/\.([^.]+)/', '[$1]', $key)]),
+                    str_starts_with($key, 'data.') => new JsonApiErrorData('422', 'Invalid attribute', $message, source: new JsonApiErrorSourceData(pointer: '/'.str_replace('.', '/', $key))),
+                    default => new JsonApiErrorData('422', 'Invalid parameter', $message, source: new JsonApiErrorSourceData(parameter: preg_replace('/\.([^.]+)/', '[$1]', $key))),
                 };
             }
         }
