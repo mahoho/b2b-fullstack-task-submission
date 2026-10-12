@@ -21,8 +21,10 @@ php artisan serve
 
 The seeder creates a demo partner with the bearer token `demo-partner-token`, a campaign with 24 applicants (`0b8f3c2e-5a61-4c7d-9e2a-3f4b5c6d7e81`) and an empty campaign (`7d1e9a40-2b3c-4d5e-8f60-718293a4b5c6`).
 
+`-g` stops curl from reading the brackets in `page[size]` as a URL pattern.
+
 ```bash
-curl -H 'Authorization: Bearer demo-partner-token' \
+curl -g -H 'Authorization: Bearer demo-partner-token' \
   'http://127.0.0.1:8000/api/v1/campaigns/0b8f3c2e-5a61-4c7d-9e2a-3f4b5c6d7e81/applicant-summary?min_score=80&page[size]=5'
 ```
 
