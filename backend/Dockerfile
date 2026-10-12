@@ -5,6 +5,9 @@ RUN apt-get update \
     && docker-php-ext-install pdo_mysql zip intl \
     && rm -rf /var/lib/apt/lists/*
 
+# OPcache rechecks files only every 2 s by default, so a request right after an edit would get the old code.
+RUN echo 'opcache.revalidate_freq=0' > "$PHP_INI_DIR/conf.d/zz-revalidate.ini"
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app

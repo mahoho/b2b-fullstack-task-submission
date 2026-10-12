@@ -24,17 +24,16 @@ is fine. The frontend proxies `/api/v1/**` to the backend with `NUXT_API_BASE` a
 
 ### Live reload
 
-`docker-compose.override.yml` is picked up automatically. It bind-mounts `backend/` and
-`frontend/` into the containers and runs the frontend with `nuxt dev`. Edit the frontend and
-the browser updates. Edit PHP and the next request runs the new code, because
-`php artisan serve` loads the code fresh on each request.
+`docker compose up` also reads `docker-compose.override.yml`, which runs both apps from
+the source on your machine. The frontend runs `nuxt dev`, Vite's dev server, so a saved
+change shows up in the open page without a reload. PHP changes, new routes included,
+apply to the next request. A new migration runs on `docker compose restart backend`.
 
-Dependencies live in named volumes (`frontend-node-modules`, `backend-vendor`). After changing
-`package-lock.json` or `composer.lock`, run `docker compose up --build -V` to refresh them.
-If you add a new PHP route file, config or migration, restart the backend with
-`docker compose restart backend`.
+The installed dependencies stay inside the containers. After changing `package-lock.json`
+or `composer.lock`, run `docker compose up --build -V`. `-V` swaps in the dependencies
+from the rebuilt images.
 
-To run the production frontend image instead, skip the override:
+To run the production frontend build instead, leave the override out:
 
     docker compose -f docker-compose.yml up --build
 
