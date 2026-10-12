@@ -21,6 +21,9 @@ export function useApplicantReview(campaignId: string) {
   const pendingIds = ref(new Set<string>())
   const actionErrors = ref<Record<string, string>>({})
 
+  // NuxtLoadingIndicator only follows route changes by itself, so data loads drive it by hand.
+  const indicator = useLoadingIndicator()
+
   // Only the newest request may write to state, so a slow early response cannot replace a newer result.
   let latestRequest = 0
 
@@ -29,6 +32,8 @@ export function useApplicantReview(campaignId: string) {
     loading.value = true
     loadError.value = false
     notFound.value = false
+    indicator.start()
+    let failed = false
 
     try {
       const document = await $fetch<ApplicantSummaryDocumentData>(
@@ -48,12 +53,16 @@ export function useApplicantReview(campaignId: string) {
     }
     catch (error) {
       if (request !== latestRequest) return
+      failed = true
       // An unknown campaign, or another partner's, cannot succeed on retry, so it gets its own state.
       notFound.value = (error as { statusCode?: number }).statusCode === 404
       loadError.value = !notFound.value
     }
     finally {
-      if (request === latestRequest) loading.value = false
+      if (request === latestRequest) {
+        loading.value = false
+        indicator.finish({ error: failed })
+      }
     }
   }
 
