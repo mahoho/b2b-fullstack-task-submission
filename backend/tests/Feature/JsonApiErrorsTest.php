@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Concerns\CreatesEntities;
 use Tests\Concerns\RefreshesDoctrineSchema;
@@ -74,6 +75,29 @@ class JsonApiErrorsTest extends TestCase
             ->assertNotFound()
             ->assertHeader('Content-Type', 'application/vnd.api+json')
             ->assertJsonPath('errors.0.status', '404');
+    }
+
+    #[DataProvider('pathsOutsideTheApi')]
+    public function test_paths_outside_the_api_are_a_bare_json_api_404(string $path): void
+    {
+        $response = $this->get($path);
+
+        $response->assertNotFound()
+            ->assertHeader('Content-Type', 'application/vnd.api+json')
+            ->assertJsonPath('errors.0.status', '404');
+        $this->assertSame([], $response->headers->getCookies());
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function pathsOutsideTheApi(): array
+    {
+        return [
+            'welcome page' => ['/'],
+            'health page' => ['/up'],
+            'unknown path' => ['/does-not-exist'],
+        ];
     }
 
     public function test_unexpected_exception_hides_its_details(): void

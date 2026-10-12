@@ -16,12 +16,8 @@ use Throwable;
 
 class JsonApiExceptionRenderer
 {
-    public function __invoke(Throwable $e, Request $request): ?JsonResponse
+    public function __invoke(Throwable $e, Request $request): JsonResponse
     {
-        if (! $request->is('api/*')) {
-            return null;
-        }
-
         return match (true) {
             $e instanceof ValidationException => $this->respond(422, $this->validationErrors($e)),
             $e instanceof AuthenticationException => $this->respond(
