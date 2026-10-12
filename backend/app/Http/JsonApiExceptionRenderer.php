@@ -4,6 +4,7 @@ namespace App\Http;
 
 use App\Data\JsonApiErrorData;
 use App\Data\JsonApiErrorDocumentData;
+use App\Data\JsonApiErrorSourceData;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,8 +61,8 @@ class JsonApiExceptionRenderer
         foreach ($e->errors() as $key => $messages) {
             foreach ($messages as $message) {
                 $errors[] = match (true) {
-                    str_starts_with($key, 'data.') => new JsonApiErrorData('422', 'Invalid attribute', $message, source: ['pointer' => '/'.str_replace('.', '/', $key)]),
-                    default => new JsonApiErrorData('422', 'Invalid parameter', $message, source: ['parameter' => preg_replace('/\.([^.]+)/', '[$1]', $key)]),
+                    str_starts_with($key, 'data.') => new JsonApiErrorData('422', 'Invalid attribute', $message, source: new JsonApiErrorSourceData(pointer: '/'.str_replace('.', '/', $key))),
+                    default => new JsonApiErrorData('422', 'Invalid parameter', $message, source: new JsonApiErrorSourceData(parameter: preg_replace('/\.([^.]+)/', '[$1]', $key))),
                 };
             }
         }

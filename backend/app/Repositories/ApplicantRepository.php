@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Data\ApplicantAggregatesData;
 use App\Entities\Applicant;
 use App\Entities\Campaign;
 use App\Entities\Partner;
@@ -16,10 +17,8 @@ class ApplicantRepository extends EntityRepository
 {
     /**
      * One aggregate query, so the summary costs the same for 10 applicants or 100,000.
-     *
-     * @return array{total: int, eligible: int, average: float|string|null}
      */
-    public function aggregates(Campaign $campaign): array
+    public function aggregates(Campaign $campaign): ApplicantAggregatesData
     {
         $row = $this->createQueryBuilder('a')
             ->select('COUNT(a.id) AS total')
@@ -31,7 +30,7 @@ class ApplicantRepository extends EntityRepository
             ->getQuery()
             ->getSingleResult();
 
-        return ['total' => (int) $row['total'], 'eligible' => (int) $row['eligible'], 'average' => $row['average']];
+        return ApplicantAggregatesData::fromRow($row);
     }
 
     /**
