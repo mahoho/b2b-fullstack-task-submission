@@ -17,6 +17,9 @@ const {
 
 onMounted(load)
 
+// Skeletons only for the very first load. Later reloads keep the list in place, so nothing jumps.
+const initialLoading = computed(() => loading.value && !pageMeta.value)
+
 const emptyMessage = computed(() => minScore.value > 0
   ? `No applicants scored ${minScore.value} or higher.`
   : 'No applicants yet.')
@@ -45,7 +48,7 @@ const emptyMessage = computed(() => minScore.value > 0
     </div>
 
     <div
-      v-if="loading"
+      v-if="initialLoading"
       role="status"
       aria-busy="true"
       class="space-y-4"
@@ -92,6 +95,7 @@ const emptyMessage = computed(() => minScore.value > 0
     <ul
       v-else
       class="space-y-4"
+      :aria-busy="loading"
     >
       <li
         v-for="applicant in applicants"
