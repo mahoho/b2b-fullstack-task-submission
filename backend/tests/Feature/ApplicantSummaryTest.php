@@ -205,12 +205,11 @@ class ApplicantSummaryTest extends TestCase
         $this->summary('', strtoupper($this->campaign->getId()))->assertOk()->assertJsonPath('meta.summary.totalApplicants', 1);
     }
 
-    public function test_malformed_campaign_id_is_an_invalid_identifier(): void
+    public function test_malformed_campaign_id_is_not_found(): void
     {
         $this->summary('', 'not-a-uuid')
-            ->assertUnprocessable()
-            ->assertJsonPath('errors.0.code', 'invalid_identifier')
-            ->assertJsonMissingPath('errors.0.source');
+            ->assertNotFound()
+            ->assertExactJson(['errors' => [['status' => '404', 'title' => 'Not Found', 'detail' => 'Campaign not found.']]]);
     }
 
     public static function invalidQueries(): array
@@ -265,5 +264,12 @@ class ApplicantSummaryTest extends TestCase
     public function test_authentication_runs_before_validation(): void
     {
         $this->getJson('/api/v1/campaigns/not-a-uuid/applicant-summary?page[size]=999')->assertUnauthorized();
+    }
+
+    public function test_authentication_runs_before_the_campaign_lookup(): void
+    {
+        // Without a token, a real campaign and a missing one must look the same: 401, never 404.
+        $this->getJson("/api/v1/campaigns/{$this->campaign->getId()}/applicant-summary")->assertUnauthorized();
+        $this->getJson('/api/v1/campaigns/'.Str::uuid().'/applicant-summary')->assertUnauthorized();
     }
 }
