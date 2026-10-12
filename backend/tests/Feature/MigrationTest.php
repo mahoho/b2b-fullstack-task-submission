@@ -7,6 +7,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Deprecations\Deprecation;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
+use Illuminate\Support\Facades\Artisan;
 use Psr\Log\NullLogger;
 use Tests\TestCase;
 
@@ -22,16 +23,16 @@ class MigrationTest extends TestCase
         Deprecation::enableTrackingDeprecations();
         $before = Deprecation::getTriggeredDeprecations();
 
-        $schema = new Schema();
-        (new Version20261012000000($connection, new NullLogger()))->up($schema);
-        (new Version20261012000000($connection, new NullLogger()))->down($schema);
+        $schema = new Schema;
+        (new Version20261012000000($connection, new NullLogger))->up($schema);
+        (new Version20261012000000($connection, new NullLogger))->down($schema);
 
         $this->assertSame($before, Deprecation::getTriggeredDeprecations());
     }
 
     public function test_migrated_schema_matches_the_entity_mapping(): void
     {
-        $this->artisan('doctrine:migrations:migrate', ['--no-interaction' => true])->assertSuccessful();
+        $this->assertSame(0, Artisan::call('doctrine:migrations:migrate', ['--no-interaction' => true]));
 
         $em = $this->app->make(EntityManagerInterface::class);
         $pending = array_filter(

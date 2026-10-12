@@ -1,10 +1,4 @@
 import { withNuxt } from './.nuxt/eslint.config.mjs'
 
-export default withNuxt({
-  rules: {
-    'vue/max-attributes-per-line': ['error', {
-      singleline: { max: 1 },
-      multiline: { max: 1 },
-    }],
-  },
-})
+// types/api.ts is generated from the backend DTOs (composer types), so it is not linted.
+export default withNuxt({ ignores: ['types/api.ts'] })

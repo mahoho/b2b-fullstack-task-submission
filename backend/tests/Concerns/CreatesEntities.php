@@ -31,7 +31,7 @@ trait CreatesEntities
     }
 
     /**
-     * @param list<string> $highlights
+     * @param  list<string>  $highlights
      */
     protected function makeApplicant(
         Campaign $campaign,

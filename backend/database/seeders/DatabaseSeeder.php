@@ -39,7 +39,7 @@ class DatabaseSeeder extends Seeder
         $tokenHash = hash('sha256', self::DEMO_TOKEN);
 
         if ($em->getRepository(Partner::class)->findOneBy(['apiTokenHash' => $tokenHash]) !== null) {
-            $this->command?->info('Demo data is already seeded.');
+            $this->command->info('Demo data is already seeded.');
 
             return;
         }
@@ -56,12 +56,15 @@ class DatabaseSeeder extends Seeder
         $firstDay = new DateTimeImmutable('2026-09-01 09:00:00', new DateTimeZone('UTC'));
 
         foreach (self::SCORES as $day => $score) {
+            /** @var list<string> $highlights */
+            $highlights = $faker->randomElements(self::HIGHLIGHTS, 4);
+
             $em->persist(new Applicant(
                 $campaign,
                 $faker->name(),
                 $faker->unique()->safeEmail(),
                 $score,
-                $faker->randomElements(self::HIGHLIGHTS, 4),
+                $highlights,
                 $firstDay->modify("+{$day} days"),
             ));
         }

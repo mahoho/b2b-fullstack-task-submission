@@ -15,7 +15,7 @@ class ApplicantAggregatesData extends Data
     ) {}
 
     /**
-     * @param array<string, mixed> $row DQL row: MySQL returns COUNT and SUM as strings, AVG as a decimal string or null.
+     * @param  array<string, mixed>  $row  DQL row: MySQL returns COUNT and SUM as strings, AVG as a decimal string or null.
      */
     public static function fromRow(array $row): self
     {

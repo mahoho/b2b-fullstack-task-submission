@@ -7,7 +7,7 @@ use Spatie\LaravelData\Data;
 class ApplicantSummaryData extends Data
 {
     /**
-     * @param list<TopTierApplicantData> $topTier
+     * @param  list<TopTierApplicantData>  $topTier
      */
     public function __construct(
         public int $totalApplicants,
@@ -17,7 +17,7 @@ class ApplicantSummaryData extends Data
     ) {}
 
     /**
-     * @param list<TopTierApplicantData> $topTier
+     * @param  list<TopTierApplicantData>  $topTier
      */
     public static function fromAggregates(ApplicantAggregatesData $aggregates, array $topTier): self
     {

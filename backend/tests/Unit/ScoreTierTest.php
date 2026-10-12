@@ -8,6 +8,9 @@ use PHPUnit\Framework\TestCase;
 
 class ScoreTierTest extends TestCase
 {
+    /**
+     * @return array<string, array{?int, int, ScoreTier}>
+     */
     public static function scores(): array
     {
         return [

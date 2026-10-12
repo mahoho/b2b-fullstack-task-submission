@@ -31,8 +31,8 @@ class JsonApiExceptionRenderer
     }
 
     /**
-     * @param list<JsonApiErrorData> $errors
-     * @param array<string, string> $headers
+     * @param  list<JsonApiErrorData>  $errors
+     * @param  array<string, string>  $headers
      */
     private function respond(int $status, array $errors, array $headers = []): JsonResponse
     {
@@ -50,7 +50,7 @@ class JsonApiExceptionRenderer
         return new JsonApiErrorData(
             status: (string) $status,
             title: Response::$statusTexts[$status] ?? 'Error',
-            detail: $e->getMessage() !== '' ? $e->getMessage() : new Optional(),
+            detail: $e->getMessage() !== '' ? $e->getMessage() : new Optional,
         );
     }
 
@@ -65,7 +65,7 @@ class JsonApiExceptionRenderer
             foreach ($messages as $message) {
                 $errors[] = match (true) {
                     str_starts_with($key, 'data.') => new JsonApiErrorData('422', 'Invalid attribute', $message, source: new JsonApiErrorSourceData(pointer: '/'.str_replace('.', '/', $key))),
-                    default => new JsonApiErrorData('422', 'Invalid parameter', $message, source: new JsonApiErrorSourceData(parameter: preg_replace('/\.([^.]+)/', '[$1]', $key))),
+                    default => new JsonApiErrorData('422', 'Invalid parameter', $message, source: new JsonApiErrorSourceData(parameter: preg_replace('/\.([^.]+)/', '[$1]', $key) ?? $key)),
                 };
             }
         }

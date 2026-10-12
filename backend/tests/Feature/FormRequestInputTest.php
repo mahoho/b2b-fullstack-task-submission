@@ -9,7 +9,7 @@ use Tests\TestCase;
 class FormRequestInputTest extends TestCase
 {
     /**
-     * @param array<string, mixed> $query
+     * @param  array<string, mixed>  $query
      */
     private function resolve(array $query): ApplicantSummaryRequest
     {

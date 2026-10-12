@@ -6,16 +6,20 @@ use App\Entities\Applicant;
 use App\Enums\ApplicantStatus;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Concerns\CreatesEntities;
 use Tests\Concerns\RefreshesDoctrineSchema;
 use Tests\TestCase;
 
 class UpdateApplicantStatusTest extends TestCase
 {
-    use RefreshesDoctrineSchema, CreatesEntities;
+    use CreatesEntities, RefreshesDoctrineSchema;
 
     private const TOKEN = 'partner-token';
 
+    /**
+     * @return TestResponse<Response>
+     */
     private function patchStatus(string $routeId, string $status, ?string $bodyId = null, string $type = 'applicants'): TestResponse
     {
         return $this->withToken(self::TOKEN)->patchJson("/api/v1/applicants/{$routeId}", [
@@ -27,7 +31,10 @@ class UpdateApplicantStatusTest extends TestCase
     {
         $this->em->clear();
 
-        return $this->em->find(Applicant::class, $id)->getStatus();
+        $applicant = $this->em->find(Applicant::class, $id);
+        $this->assertInstanceOf(Applicant::class, $applicant);
+
+        return $applicant->getStatus();
     }
 
     private function ownApplicant(): Applicant
@@ -154,7 +161,7 @@ class UpdateApplicantStatusTest extends TestCase
     public function test_json_api_media_type_body_is_accepted(): void
     {
         $id = $this->ownApplicant()->getId();
-        $body = json_encode(['data' => ['type' => 'applicants', 'id' => $id, 'attributes' => ['status' => 'rejected']]]);
+        $body = json_encode(['data' => ['type' => 'applicants', 'id' => $id, 'attributes' => ['status' => 'rejected']]], JSON_THROW_ON_ERROR);
 
         // call() skips the default headers that withToken() sets, so the token goes in the server variables.
         $this->call('PATCH', "/api/v1/applicants/{$id}", [], [], [], [

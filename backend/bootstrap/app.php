@@ -23,5 +23,5 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: AuthenticatePartner::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->render(new JsonApiExceptionRenderer());
+        $exceptions->render(new JsonApiExceptionRenderer);
     })->create();

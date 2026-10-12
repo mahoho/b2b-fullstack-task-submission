@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 class JsonApiErrorsTest extends TestCase
 {
-    use RefreshesDoctrineSchema, CreatesEntities;
+    use CreatesEntities, RefreshesDoctrineSchema;
 
     protected function setUp(): void
     {
@@ -107,7 +107,7 @@ class JsonApiErrorsTest extends TestCase
         $response = $this->withToken('right-token')->getJson('/api/v1/_test/boom');
 
         $response->assertStatus(500)->assertExactJson(['errors' => [['status' => '500', 'title' => 'Server Error']]]);
-        $this->assertStringNotContainsString('hunter2', $response->getContent());
+        $this->assertStringNotContainsString('hunter2', (string) $response->getContent());
     }
 
     public function test_validation_errors_map_to_parameters_and_pointers(): void

@@ -1,25 +1,12 @@
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineNuxtConfig({
-  compatibilityDate: '2026-10-01',
-  srcDir: '.',
-  devtools: { enabled: false },
   modules: [
     '@nuxt/test-utils/module',
-    ['@nuxt/eslint', {
-      config: {
-        stylistic: {
-          semi: false,
-          quotes: 'single',
-          indent: 2,
-          commaDangle: 'always-multiline',
-          braceStyle: 'stroustrup',
-        },
-      },
-    }],
+    ['@nuxt/eslint', { config: { stylistic: true } }],
   ],
+  devtools: { enabled: false },
   css: ['~/assets/css/main.css'],
-  vite: { plugins: [tailwindcss()] },
   runtimeConfig: {
     // Empty on purpose: filled from NUXT_API_BASE and NUXT_API_TOKEN (see .env.example).
     apiBase: '',
@@ -28,4 +15,7 @@ export default defineNuxtConfig({
       demoCampaignId: '0b8f3c2e-5a61-4c7d-9e2a-3f4b5c6d7e81',
     },
   },
+  srcDir: '.',
+  compatibilityDate: '2026-10-01',
+  vite: { plugins: [tailwindcss()] },
 })

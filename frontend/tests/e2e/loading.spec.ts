@@ -11,7 +11,11 @@ test('loading the next page shows the loading bar and keeps the list in place', 
   // The first page answers at once; the next one waits until the test releases it.
   await page.route('**/api/v1/campaigns/*/applicant-summary**', async (route) => {
     requests += 1
-    if (requests > 1) await new Promise<void>((resolve) => { release = resolve })
+    if (requests > 1) {
+      await new Promise<void>((resolve) => {
+        release = resolve
+      })
+    }
     await route.fulfill({ json: makeDocument(applicants, { lastPage: 2 }) })
   })
 

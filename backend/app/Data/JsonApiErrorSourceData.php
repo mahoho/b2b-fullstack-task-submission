@@ -8,7 +8,7 @@ use Spatie\LaravelData\Optional;
 class JsonApiErrorSourceData extends Data
 {
     public function __construct(
-        public string|Optional $parameter = new Optional(),
-        public string|Optional $pointer = new Optional(),
+        public string|Optional $parameter = new Optional,
+        public string|Optional $pointer = new Optional,
     ) {}
 }

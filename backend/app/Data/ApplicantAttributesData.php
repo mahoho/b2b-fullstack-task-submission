@@ -9,7 +9,7 @@ use Spatie\LaravelData\Data;
 class ApplicantAttributesData extends Data
 {
     /**
-     * @param list<string> $highlights
+     * @param  list<string>  $highlights
      */
     public function __construct(
         public string $name,

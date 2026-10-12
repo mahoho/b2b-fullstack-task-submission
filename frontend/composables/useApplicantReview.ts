@@ -19,7 +19,7 @@ export function useApplicantReview(campaignId: string) {
   const minScore = ref(0)
   const page = ref(1)
   const pendingIds = ref(new Set<string>())
-  const actionErrors = ref<Record<string, string>>({})
+  const actionErrors = ref(new Map<string, string>())
 
   // NuxtLoadingIndicator only follows route changes by itself, so data loads drive it by hand.
   const indicator = useLoadingIndicator()
@@ -87,7 +87,7 @@ export function useApplicantReview(campaignId: string) {
     const previous = applicant.attributes.status
     applicant.attributes.status = status
     pendingIds.value.add(id)
-    delete actionErrors.value[id]
+    actionErrors.value.delete(id)
 
     // A filter or page change can replace the list while the PATCH is in flight, so the outcome is
     // written to whichever row is on screen now, not to the object that was clicked.
@@ -105,7 +105,7 @@ export function useApplicantReview(campaignId: string) {
     catch {
       const row = current()
       if (row) row.attributes.status = previous
-      actionErrors.value[id] = ACTION_ERROR
+      actionErrors.value.set(id, ACTION_ERROR)
     }
     finally {
       pendingIds.value.delete(id)

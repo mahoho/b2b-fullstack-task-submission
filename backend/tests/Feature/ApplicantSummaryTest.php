@@ -6,13 +6,14 @@ use App\Entities\Campaign;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Concerns\CreatesEntities;
 use Tests\Concerns\RefreshesDoctrineSchema;
 use Tests\TestCase;
 
 class ApplicantSummaryTest extends TestCase
 {
-    use RefreshesDoctrineSchema, CreatesEntities;
+    use CreatesEntities, RefreshesDoctrineSchema;
 
     private const TOKEN = 'partner-token';
 
@@ -25,6 +26,9 @@ class ApplicantSummaryTest extends TestCase
         $this->campaign = $this->makeCampaign($this->makePartner(self::TOKEN), eligibilityThreshold: 70);
     }
 
+    /**
+     * @return TestResponse<Response>
+     */
     private function summary(string $query = '', ?string $campaignId = null): TestResponse
     {
         $id = $campaignId ?? $this->campaign->getId();
@@ -50,6 +54,7 @@ class ApplicantSummaryTest extends TestCase
     }
 
     /**
+     * @param  TestResponse<Response>  $response
      * @return list<string>
      */
     private function names(TestResponse $response): array
@@ -212,6 +217,9 @@ class ApplicantSummaryTest extends TestCase
             ->assertExactJson(['errors' => [['status' => '404', 'title' => 'Not Found', 'detail' => 'Campaign not found.']]]);
     }
 
+    /**
+     * @return array<string, array{string, string}>
+     */
     public static function invalidQueries(): array
     {
         return [
