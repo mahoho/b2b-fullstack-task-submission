@@ -14,6 +14,8 @@ Done means: `php artisan test` passes in `backend/`, `npm test` and `npm run tes
 - PHP 8.4 locally (Laravel 13 needs 8.3+, the PDF asks for 8.2+), Composer 2.10.
 - Laravel 13 from `composer create-project laravel/laravel backend`.
 - Doctrine through `laravel-doctrine/orm` 3.3 (ORM 3, DBAL 4) and `laravel-doctrine/migrations` 3.4. No Eloquent models in the app code.
+- `spatie/laravel-data` 4.23 for every DTO: validated input from the route, query and body, and the response documents.
+- `spatie/laravel-typescript-transformer` 3.3 with its laravel-data extension, generating the frontend's API types from those DTOs and the PHP enums.
 - SQLite for local dev and tests. MySQL works by changing `DB_CONNECTION` in `.env`; nothing in the code is SQLite specific.
 - Node 22 (`nvm`, pinned in `frontend/.nvmrc`). The machine default is Node 18.14, which Nuxt 4 does not support.
 - Nuxt 4.6, Vue 3 `<script setup lang="ts">`, Tailwind CSS 4. No PrimeVue, no Pinia.
@@ -83,7 +85,6 @@ List order: `aiScore` descending (unscored last), then `appliedAt` ascending, th
 
 ```json
 {
-  "jsonapi": { "version": "1.1" },
   "data": [
     {
       "type": "applicants",
@@ -134,7 +135,7 @@ Request body:
 { "data": { "type": "applicants", "id": "5f0c...", "attributes": { "status": "shortlisted" } } }
 ```
 
-Rules: `data.type` must be `applicants`, `data.id` must equal the route id, `status` must be one of the three enum values. Response 200 with `{ "jsonapi": ..., "data": <applicant resource> }`.
+Rules: `data.type` must be `applicants`, `data.id` must equal the route id, `status` must be one of the three enum values. Response 200 with `{ "data": <applicant resource> }`.
 
 ### Errors
 
@@ -154,11 +155,24 @@ Every error from `/api/*` is rendered in one place, `bootstrap/app.php` `withExc
 ### Units
 
 - `app/Http/Middleware/AuthenticatePartner.php`: reads `Authorization: Bearer <token>`, looks up the Partner by `hash('sha256', $token)`, puts it on the request (`$request->attributes->set('partner', $partner)`), throws `AuthenticationException` otherwise.
-- `app/Http/Requests/ApplicantSummaryRequest.php` and `UpdateApplicantStatusRequest.php`: FormRequest validation as above. Route ids are merged into the validated data so the uuid rule covers them. No `exists` rules, since those go through Laravel's query builder rather than Doctrine.
-- `app/Repositories/ApplicantRepository.php` (Doctrine `EntityRepository`, set as the Applicant `repositoryClass`). Four queries per summary request, whatever the campaign size: one DQL aggregate (`COUNT`, `SUM(CASE WHEN aiScore >= :threshold ...)`, `AVG(aiScore)`), one top tier query, one page query with `setFirstResult`/`setMaxResults`, one filtered count. Nothing is loaded into PHP to be counted, and the page loop never touches the lazy `campaign` association.
-- `app/Services/ApplicantSummaryService.php`: finds the campaign for the partner (404 otherwise), calls the repository, applies the summary rules (null average -> 0, rounding), returns a plain result object (summary, applicants, total, page, size).
-- `app/Http/Resources/ApplicantResource.php`: JSON:API resource object for one Applicant, including the computed `tier`.
-- `app/Http/Controllers/Api/V1/ApplicantSummaryController.php` and `UpdateApplicantStatusController.php`: invokable, thin. The summary controller builds the document (`data`, `meta`, `links`).
+- `app/Http/Middleware/JsonApiContentType.php`: sets `Content-Type: application/vnd.api+json` on every `/api` response.
+- Input DTOs in `app/Data/Input/`, injected into the controllers so laravel-data validates them before the controller runs:
+  - `ApplicantSummaryQueryData`: `campaignId` (`#[FromRouteParameter]`, uuid), `minScore` (`#[MapInputName('min_score')]`, nullable int 0 to 100), `pageSize` (`#[MapInputName('page.size')]`, int 1 to 50, default 10), `pageNumber` (`#[MapInputName('page.number')]`, int at least 1, default 1).
+  - `UpdateApplicantStatusData`: `applicantId` (route, uuid), `type` (`data.type`, must be `applicants`), `id` (`data.id`, must equal `applicantId`), `status` (`data.attributes.status`, `ApplicantStatus` enum).
+  - No `exists` rules, since those go through Laravel's query builder rather than Doctrine. Existence and ownership are checked in the service.
+- Output DTOs in `app/Data/`, each marked for TypeScript generation:
+  - `ApplicantAttributesData` (name, email, aiScore, tier, status, appliedAt, highlights) and `ApplicantResourceData` (`type`, `id`, `attributes`), built from an Applicant entity plus the campaign's eligibility threshold, so the tier is computed without touching the lazy `campaign` association per row.
+  - `TopTierApplicantData`, `ApplicantSummaryData`, `PageMetaData`, `PaginationLinksData`.
+  - `ApplicantSummaryDocumentData` (`data`, `meta.summary`, `meta.page`, `links`) and `ApplicantDocumentData` (`data`) for the PATCH response.
+  - `JsonApiErrorData` and `JsonApiErrorDocumentData`, used by the exception renderer. Members the spec leaves out (`code`, `source`, `detail`) are laravel-data `Optional`, so they are absent from the JSON and optional in TypeScript.
+- `app/Repositories/ApplicantRepository.php` (Doctrine `EntityRepository`, set as the Applicant `repositoryClass`). Four queries per summary request, whatever the campaign size: one DQL aggregate (`COUNT`, `SUM(CASE WHEN aiScore >= :threshold ...)`, `AVG(aiScore)`), one top tier query, one page query with `setFirstResult`/`setMaxResults`, one filtered count. Nothing is loaded into PHP to be counted.
+- `app/Services/ApplicantSummaryService.php`: takes the partner and `ApplicantSummaryQueryData`, finds the campaign for the partner (404 otherwise), calls the repository, applies the summary rules (null average -> 0, rounding) and returns `ApplicantSummaryDocumentData`.
+- `app/Http/Controllers/Api/V1/ApplicantSummaryController.php` and `UpdateApplicantStatusController.php`: invokable, a few lines each, return the document DTO.
+- Validation errors come from laravel-data keyed by input name (`min_score`, `page.size`, `data.attributes.status`). The renderer turns query keys into bracket form for `source.parameter` and body keys into JSON pointers for `source.pointer`, and maps the route id keys to `invalid_identifier`.
+
+### TypeScript generation
+
+`app/Providers/TypeScriptTransformerServiceProvider.php` (created by `php artisan typescript:install`) registers the laravel-data extension, the enum transformer as string unions, `app_path()` as the transform directory, and the `FlatModuleWriter` with output in `../frontend/types/`. `composer types` runs `php artisan typescript:transform`. The generated file is committed and never edited by hand; after any DTO or enum change, running `composer types` and then `git diff --exit-code frontend/types` must show no change.
 
 ### Backend tests
 
@@ -182,7 +196,7 @@ Test DB: SQLite in memory. A `RefreshesDoctrineSchema` trait rebuilds the schema
 - 404 for another partner's applicant.
 
 `tests/Unit/ScoreTierTest.php`: boundaries at 89/90, at and below the threshold, null.
-`tests/Unit/ApplicantSummaryServiceTest.php`: summary math from fixed aggregate input (null average, rounding to 1 decimal).
+`tests/Unit/ApplicantSummaryDataTest.php`: the summary math lives in `ApplicantSummaryData::fromAggregates()` and is tested from fixed input (null average -> 0, rounding to 1 decimal).
 
 ## Frontend
 
@@ -198,7 +212,7 @@ Styling is Tailwind utilities in templates. No `<style>` blocks in `.vue` files;
 
 ### Units
 
-- `types/applicant.ts`: `ApplicantStatus`, `ScoreTier`, `Applicant` (id plus attributes, flattened), `ApplicantSummary`, `PageMeta`, `ApplicantSummaryDocument` (raw JSON:API shape), `JsonApiError`.
+- `types/`: the file generated by the backend's `composer types` (see TypeScript generation). Components and the composable import `ApplicantResourceData`, `ApplicantSummaryDocumentData`, `ApplicantStatus`, `ScoreTier` and the rest from it. No hand-written copies of API types.
 - `server/api/v1/[...path].ts`: Nitro handler, `proxyRequest(event, apiBase + event.path, { headers: { Authorization: 'Bearer ' + apiToken } })`. The token never reaches the browser and there is no CORS setup.
 - `composables/useApplicantReview.ts` (campaign id in, state and actions out):
   - Fetches on the client only (called from `onMounted`). Portal data sits behind auth and this keeps the skeleton visible on first paint.
@@ -246,7 +260,7 @@ Three pieces get a raw AI draft: (1) `ApplicantRepository` plus `ApplicantSummar
 
 For each piece, in order:
 1. Write and commit the tests for it first.
-2. Dispatch a fresh subagent (model: Sonnet) with a plain one-shot prompt, the kind of request a developer types into an editor assistant: the requirement in a few sentences plus the entity or type definitions it needs. The subagent is told not to read or write files and to answer with the file content only.
+2. Dispatch a fresh subagent (model: Sonnet) with a plain one-shot prompt, the kind of request a developer types into an editor assistant: the requirement in a few sentences plus the entity, DTO or type definitions it needs. The subagent is told not to read or write files and to answer with the file content only.
 3. Save the reply verbatim to the real path and commit it as `chore(ai-raw): ...`.
 4. Run the tests and record the failures.
 5. Fix it into the final version and commit (`refactor(...)` or `fix(...)`).
@@ -278,7 +292,7 @@ Long term, for 50x volume:
 
 ## README
 
-Prerequisites, then backend steps (`composer install`, copy `.env.example`, `php artisan key:generate`, `php artisan doctrine:migrations:migrate`, `php artisan db:seed`, `php artisan serve`), frontend steps (`nvm use`, `npm ci`, `npm run dev`, open the demo campaign), the demo token, and the test commands for both apps.
+Prerequisites, then backend steps (`composer install`, copy `.env.example`, `php artisan key:generate`, `php artisan doctrine:migrations:migrate`, `php artisan db:seed`, `php artisan serve`, `composer types` after DTO changes), frontend steps (`nvm use`, `npm ci`, `npm run dev`, open the demo campaign), the demo token, and the test commands for both apps.
 
 ## Working rules
 
