@@ -1,3 +1,4 @@
+// app/Http/JsonApiExceptionRenderer.php
 <?php
 
 namespace App\Http;
@@ -15,8 +16,6 @@ use Throwable;
 
 class JsonApiExceptionRenderer
 {
-    private const ROUTE_IDENTIFIERS = ['campaignId', 'applicantId'];
-
     public function __invoke(Throwable $e, Request $request): ?JsonResponse
     {
         if (! $request->is('api/*')) {
@@ -62,7 +61,6 @@ class JsonApiExceptionRenderer
         foreach ($e->errors() as $key => $messages) {
             foreach ($messages as $message) {
                 $errors[] = match (true) {
-                    in_array($key, self::ROUTE_IDENTIFIERS, true) => new JsonApiErrorData('422', 'Invalid identifier', $message, code: 'invalid_identifier'),
                     str_starts_with($key, 'data.') => new JsonApiErrorData('422', 'Invalid attribute', $message, source: ['pointer' => '/'.str_replace('.', '/', $key)]),
                     default => new JsonApiErrorData('422', 'Invalid parameter', $message, source: ['parameter' => preg_replace('/\.([^.]+)/', '[$1]', $key)]),
                 };
