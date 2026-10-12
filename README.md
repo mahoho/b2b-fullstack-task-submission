@@ -6,6 +6,25 @@ A Laravel 13 API (Doctrine ORM, spatie/laravel-data) in `backend/` and a Nuxt 4 
 
 PHP 8.4 with `pdo_sqlite`, Composer 2, and Node 22 (`frontend/.nvmrc` pins 22.23.1).
 
+## Run with Docker
+
+Docker is the only thing you need installed.
+
+    docker compose up --build
+
+The first build takes a few minutes. When it settles:
+
+- App: http://localhost:3000 (redirects to the demo campaign)
+- API: http://localhost:8000/api/v1/... (bearer token `demo-partner-token`)
+
+The backend container waits for MySQL, runs `php artisan doctrine:migrations:migrate`
+and `php artisan db:seed`, then starts the API. Both are safe to repeat, so restarting
+is fine. The frontend proxies `/api/v1/**` to the backend with `NUXT_API_BASE` and
+`NUXT_API_TOKEN`, which compose sets.
+
+To reset the database, run `docker compose down -v`. That deletes the MySQL volume.
+To stop without losing data, run `docker compose down`.
+
 ## Backend
 
 ```bash
