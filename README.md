@@ -22,6 +22,21 @@ and `php artisan db:seed`, then starts the API. Both are safe to repeat, so rest
 is fine. The frontend proxies `/api/v1/**` to the backend with `NUXT_API_BASE` and
 `NUXT_API_TOKEN`, which compose sets.
 
+### Live reload
+
+`docker compose up` also reads `docker-compose.override.yml`, which runs both apps from
+the source on your machine. The frontend runs `nuxt dev`, Vite's dev server, so a saved
+change shows up in the open page without a reload. PHP changes, new routes included,
+apply to the next request. A new migration runs on `docker compose restart backend`.
+
+The installed dependencies stay inside the containers. After changing `package-lock.json`
+or `composer.lock`, run `docker compose up --build -V`. `-V` swaps in the dependencies
+from the rebuilt images.
+
+To run the production frontend build instead, leave the override out:
+
+    docker compose -f docker-compose.yml up --build
+
 To reset the database, run `docker compose down -v`. That deletes the MySQL volume.
 To stop without losing data, run `docker compose down`.
 

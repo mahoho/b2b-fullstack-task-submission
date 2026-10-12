@@ -306,4 +306,4 @@ Prerequisites, then backend steps (`composer install`, copy `.env.example`, `php
 
 ## Out of scope
 
-Real OAuth2, Redis, a Gemini integration, PrimeVue, Pinia, and any code for Task 4 (it is a written analysis). A Docker setup was added later at the user's request (change request #6): `docker-compose.yml` runs MySQL 8, the API (migrate and seed on start, a fresh `APP_KEY` per start) and the built Nuxt server, which proxies to the API.
+Real OAuth2, Redis, a Gemini integration, PrimeVue, Pinia, and any code for Task 4 (it is a written analysis). A Docker setup was added later at the user's request (change request #6): `docker-compose.yml` runs MySQL 8, the API (migrate and seed on start, a fresh `APP_KEY` per start) and the built Nuxt server, which proxies to the API. Change request #8 added `docker-compose.override.yml`, which compose reads by default: it mounts both apps from the host, runs the frontend with `nuxt dev` (Vite, hot reload), and keeps the installed dependencies in anonymous volumes. `docker compose -f docker-compose.yml up` still runs the production frontend build.

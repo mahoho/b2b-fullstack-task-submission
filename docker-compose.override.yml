@@ -1,0 +1,17 @@
+# `docker compose up` reads this file too: both apps run from the source on the host, so edits show up without a rebuild.
+services:
+  backend:
+    volumes:
+      - ./backend:/app
+      # The image's installed dependencies; the bind mount above would hide them. `up -V` swaps in fresh ones.
+      - /app/vendor
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      # Nuxt's generated files stay in the container, apart from any local .nuxt on the host.
+      - /app/.nuxt
