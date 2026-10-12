@@ -5,16 +5,17 @@ namespace App\Http\Controllers\Api\V1;
 use App\Data\ApplicantDocumentData;
 use App\Data\ApplicantResourceData;
 use App\Entities\Applicant;
-use App\Http\Input\UpdateApplicantStatusData;
+use App\Http\Requests\UpdateApplicantStatusRequest;
 use App\Repositories\ApplicantRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class UpdateApplicantStatusController
 {
-    public function __invoke(Request $request, UpdateApplicantStatusData $input, EntityManagerInterface $em): ApplicantDocumentData
+    public function __invoke(UpdateApplicantStatusRequest $request, EntityManagerInterface $em): ApplicantDocumentData
     {
+        $input = $request->toData();
+
         /** @var ApplicantRepository $applicants */
         $applicants = $em->getRepository(Applicant::class);
         $applicant = $applicants->findForPartner($input->applicantId, $request->attributes->get('partner'))

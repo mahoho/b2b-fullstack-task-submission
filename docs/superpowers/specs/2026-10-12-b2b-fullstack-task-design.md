@@ -14,7 +14,7 @@ Done means: `php artisan test` passes in `backend/`, `npm test` and `npm run tes
 - PHP 8.4 (`"php": "^8.4"` in composer.json; the PDF asks for 8.2+). Doctrine ORM 3 uses PHP 8.4 native lazy objects, so no proxy classes are generated. Composer 2.10.
 - Laravel 13 from `composer create-project laravel/laravel backend`.
 - Doctrine through `laravel-doctrine/orm` 3.3 (ORM 3, DBAL 4) and `laravel-doctrine/migrations` 3.4. No Eloquent models in the app code.
-- `spatie/laravel-data` 4.23 for every DTO: validated input from the route, query and body, and the response documents.
+- `spatie/laravel-data` 4.23 for every DTO: the typed input the controllers pass on, and the response documents. Validation lives in FormRequest classes (change request #1).
 - `spatie/laravel-typescript-transformer` 3.3 with its laravel-data extension, generating the frontend's API types from those DTOs and the PHP enums.
 - SQLite for local dev and tests. MySQL works by changing `DB_CONNECTION` in `.env`; nothing in the code is SQLite specific.
 - Node 22 (`nvm`, pinned in `frontend/.nvmrc`). The machine default is Node 18.14, which Nuxt 4 does not support.
@@ -156,10 +156,11 @@ Every error from `/api/*` is rendered in one place, `bootstrap/app.php` `withExc
 
 - `app/Http/Middleware/AuthenticatePartner.php`: reads `Authorization: Bearer <token>`, looks up the Partner by `hash('sha256', $token)`, puts it on the request (`$request->attributes->set('partner', $partner)`), throws `AuthenticationException` otherwise.
 - `app/Http/Middleware/JsonApiContentType.php`: sets `Content-Type: application/vnd.api+json` on every `/api` response.
-- Input DTOs in `app/Http/Input/` (outside `app/Data`, so they stay out of the generated TypeScript), injected into the controllers so laravel-data validates them before the controller runs:
-  - `ApplicantSummaryQueryData`: `campaignId` (`#[FromRouteParameter]`, uuid), `minScore` (`#[MapInputName('min_score')]`, nullable int 0 to 100), `pageSize` (`#[MapInputName('page.size')]`, int 1 to 50, default 10), `pageNumber` (`#[MapInputName('page.number')]`, int at least 1, default 1).
-  - `UpdateApplicantStatusData`: `applicantId` (route, uuid), `type` (`data.type`, must be `applicants`), `id` (`data.id`, must equal `applicantId`), `status` (`data.attributes.status`, `ApplicantStatus` enum).
+- FormRequest classes in `app/Http/Requests/` validate before the controller runs, and each has a `toData()` that builds the typed input DTO. `validationData()` adds the route id to the validated data without writing it into the request:
+  - `ApplicantSummaryRequest`: `campaignId` (route, uuid), `min_score` (nullable integer 0 to 100), `page.size` (integer 1 to 50, default 10), `page.number` (integer at least 1, default 1).
+  - `UpdateApplicantStatusRequest`: `applicantId` (route, uuid), `data.type` (must be `applicants`), `data.id` (must equal `applicantId`), `data.attributes.status` (`ApplicantStatus` enum).
   - No `exists` rules, since those go through Laravel's query builder rather than Doctrine. Existence and ownership are checked in the service.
+- Input DTOs in `app/Http/Input/` (outside `app/Data`, so they stay out of the generated TypeScript): `ApplicantSummaryQueryData` (`campaignId`, `minScore`, `pageSize`, `pageNumber`) and `UpdateApplicantStatusData` (`applicantId`, `type`, `id`, `status`), plain laravel-data objects with no validation attributes.
 - Output DTOs in `app/Data/`, each marked for TypeScript generation:
   - `ApplicantAttributesData` (name, email, aiScore, tier, status, appliedAt, highlights) and `ApplicantResourceData` (`type`, `id`, `attributes`), built from an Applicant entity plus the campaign's eligibility threshold, so the tier is computed without touching the lazy `campaign` association per row.
   - `TopTierApplicantData`, `ApplicantSummaryData`, `PageMetaData`, `PaginationLinksData`.
@@ -168,7 +169,7 @@ Every error from `/api/*` is rendered in one place, `bootstrap/app.php` `withExc
 - `app/Repositories/ApplicantRepository.php` (Doctrine `EntityRepository`, set as the Applicant `repositoryClass`). Four queries per summary request, whatever the campaign size: one DQL aggregate (`COUNT`, `SUM(CASE WHEN aiScore >= :threshold ...)`, `AVG(aiScore)`), one top tier query, one page query with `setFirstResult`/`setMaxResults`, one filtered count. Nothing is loaded into PHP to be counted.
 - `app/Services/ApplicantSummaryService.php`: takes the partner and `ApplicantSummaryQueryData`, finds the campaign for the partner (404 otherwise), calls the repository, applies the summary rules (null average -> 0, rounding) and returns `ApplicantSummaryDocumentData`.
 - `app/Http/Controllers/Api/V1/ApplicantSummaryController.php` and `UpdateApplicantStatusController.php`: invokable, a few lines each, return the document DTO.
-- Validation errors come from laravel-data keyed by input name (`min_score`, `page.size`, `data.attributes.status`). The renderer turns query keys into bracket form for `source.parameter` and body keys into JSON pointers for `source.pointer`, and maps the route id keys to `invalid_identifier`.
+- Validation errors come from the FormRequests keyed by input name (`min_score`, `page.size`, `data.attributes.status`). The renderer turns query keys into bracket form for `source.parameter` and body keys into JSON pointers for `source.pointer`, and maps the route id keys to `invalid_identifier`.
 
 ### TypeScript generation
 
