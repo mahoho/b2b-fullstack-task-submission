@@ -26,7 +26,11 @@ registerEndpoint(`/api/v1/campaigns/${CAMPAIGN}/applicant-summary`, async (event
   if (!query.min_score && unfilteredGate) await unfilteredGate
   if (summaryFails) throw createError({ statusCode: 500, statusMessage: 'Server Error' })
   const min = Number(query.min_score ?? 0)
-  const matching = applicants.filter(applicant => (applicant.attributes.aiScore ?? -1) >= min)
+  const search = String(query.search ?? '').toLowerCase()
+  const matching = applicants
+    .filter(applicant => (applicant.attributes.aiScore ?? -1) >= min)
+    .filter(applicant => !query.status || applicant.attributes.status === query.status)
+    .filter(applicant => applicant.attributes.name.toLowerCase().includes(search))
   return structuredClone(makeDocument(matching, { currentPage: Number(query['page[number]'] ?? 1), lastPage }))
 })
 
@@ -144,6 +148,46 @@ describe('ApplicantReviewBoard', () => {
     expect(wrapper.text()).toContain('Ada Lovelace')
     expect(wrapper.get('output').text()).toBe('80')
     expect(summaryQueries.at(-1)).toEqual({ 'min_score': '80', 'page[number]': '1', 'page[size]': '10' })
+  })
+
+  it('filters by status from page 1, and leaves the status out again for all', async () => {
+    const joan = makeApplicant({ name: 'Joan Clarke', status: 'shortlisted' }, '44444444-4444-4444-8444-444444444444')
+    applicants = [ada, charles, joan]
+    lastPage = 2
+    const wrapper = await mountBoard()
+    await button(wrapper, 'Next').trigger('click')
+    await vi.waitFor(() => expect(summaryQueries.at(-1)).toMatchObject({ 'page[number]': '2' }))
+
+    await wrapper.get('select').setValue('shortlisted')
+
+    await vi.waitFor(() => expect(cards(wrapper)).toHaveLength(1))
+    expect(wrapper.text()).toContain('Joan Clarke')
+    expect(summaryQueries.at(-1)).toEqual({ 'status': 'shortlisted', 'page[number]': '1', 'page[size]': '10' })
+
+    await wrapper.get('select').setValue('')
+
+    await vi.waitFor(() => expect(cards(wrapper)).toHaveLength(3))
+    expect(summaryQueries.at(-1)).toEqual({ 'page[number]': '1', 'page[size]': '10' })
+  })
+
+  it('searches once for a burst of typing, and leaves a blank search out', async () => {
+    const wrapper = await mountBoard()
+    const before = summaryQueries.length
+    const box = wrapper.get('input[type="search"]')
+
+    for (const value of ['a', 'ad', 'ada']) {
+      await box.setValue(value)
+    }
+
+    await vi.waitFor(() => expect(cards(wrapper)).toHaveLength(1))
+    expect(wrapper.text()).toContain('Ada Lovelace')
+    expect(summaryQueries.length - before).toBe(1)
+    expect(summaryQueries.at(-1)).toEqual({ 'search': 'ada', 'page[number]': '1', 'page[size]': '10' })
+
+    await box.setValue('   ')
+
+    await vi.waitFor(() => expect(cards(wrapper)).toHaveLength(2))
+    expect(summaryQueries.at(-1)).toEqual({ 'page[number]': '1', 'page[size]': '10' })
   })
 
   it('sends one request for a burst of slider moves', async () => {
