@@ -11,7 +11,7 @@ Done means: `php artisan test` passes in `backend/`, `npm test` and `npm run tes
 
 ## Stack and versions
 
-- PHP 8.4 locally (Laravel 13 needs 8.3+, the PDF asks for 8.2+), Composer 2.10.
+- PHP 8.4 (`"php": "^8.4"` in composer.json; the PDF asks for 8.2+). Doctrine ORM 3 uses PHP 8.4 native lazy objects, so no proxy classes are generated. Composer 2.10.
 - Laravel 13 from `composer create-project laravel/laravel backend`.
 - Doctrine through `laravel-doctrine/orm` 3.3 (ORM 3, DBAL 4) and `laravel-doctrine/migrations` 3.4. No Eloquent models in the app code.
 - `spatie/laravel-data` 4.23 for every DTO: validated input from the route, query and body, and the response documents.
@@ -61,7 +61,7 @@ b2b-fullstack-task-submission/
 
 `app/Enums/ScoreTier.php`: backed enum `top`, `eligible`, `below`, `unscored`, with `ScoreTier::for(?int $score, int $eligibilityThreshold)`. Null -> `unscored`, 90 or more -> `top`, at or above the threshold -> `eligible`, otherwise `below`. Constants on the same enum: top tier score 90, top tier highlight limit 3.
 
-Schema is managed by one Doctrine migration generated with `doctrine:migrations:diff` into `database/migrations`. The skeleton's Eloquent `User` model, its factory and the default migrations are deleted. The API is stateless: `SESSION_DRIVER=array`, `CACHE_STORE=file`.
+Schema is managed by one Doctrine migration in `database/migrations`, written with the DBAL schema API so it runs on SQLite and MySQL alike (`doctrine:migrations:diff` emits platform-specific SQL). After migrating, `doctrine:migrations:diff` must report no changes. The skeleton's Eloquent `User` model, its factory and the default migrations are deleted. The API is stateless: `SESSION_DRIVER=array`, `CACHE_STORE=file`.
 
 `database/seeders/DatabaseSeeder.php` (uses the EntityManager, Faker for names):
 - Demo partner with token `demo-partner-token` (local only, documented in the README).
@@ -122,7 +122,7 @@ List order: `aiScore` descending (unscored last), then `appliedAt` ascending, th
 Summary rules (campaign wide, ignores `min_score`):
 - `totalApplicants`: all applicants in the campaign, scored or not.
 - `eligibleApplicants`: `aiScore >= campaign.eligibilityThreshold`.
-- `averageAiScore`: average over scored applicants only, rounded to 1 decimal. 0 when no applicant is scored, as the PDF asks for zeroed aggregates.
+- `averageAiScore`: average over scored applicants only, rounded to 1 decimal. 0 when no applicant is scored, as the PDF asks for zeroed aggregates. PHP encodes a whole float without the fraction, so JSON shows `0`, not `0.0`.
 - `topTier`: up to 3 applicants with `aiScore >= 90`, highest first, then earliest `appliedAt`. Empty list when none.
 - `meta.page.total` counts the filtered list. `lastPage` is at least 1.
 - Links keep `min_score` when it was given.
@@ -156,7 +156,7 @@ Every error from `/api/*` is rendered in one place, `bootstrap/app.php` `withExc
 
 - `app/Http/Middleware/AuthenticatePartner.php`: reads `Authorization: Bearer <token>`, looks up the Partner by `hash('sha256', $token)`, puts it on the request (`$request->attributes->set('partner', $partner)`), throws `AuthenticationException` otherwise.
 - `app/Http/Middleware/JsonApiContentType.php`: sets `Content-Type: application/vnd.api+json` on every `/api` response.
-- Input DTOs in `app/Data/Input/`, injected into the controllers so laravel-data validates them before the controller runs:
+- Input DTOs in `app/Http/Input/` (outside `app/Data`, so they stay out of the generated TypeScript), injected into the controllers so laravel-data validates them before the controller runs:
   - `ApplicantSummaryQueryData`: `campaignId` (`#[FromRouteParameter]`, uuid), `minScore` (`#[MapInputName('min_score')]`, nullable int 0 to 100), `pageSize` (`#[MapInputName('page.size')]`, int 1 to 50, default 10), `pageNumber` (`#[MapInputName('page.number')]`, int at least 1, default 1).
   - `UpdateApplicantStatusData`: `applicantId` (route, uuid), `type` (`data.type`, must be `applicants`), `id` (`data.id`, must equal `applicantId`), `status` (`data.attributes.status`, `ApplicantStatus` enum).
   - No `exists` rules, since those go through Laravel's query builder rather than Doctrine. Existence and ownership are checked in the service.
@@ -237,15 +237,15 @@ Styling is Tailwind utilities in templates. No `<style>` blocks in `.vue` files;
 
 ### Frontend tests
 
-`vitest.config.ts` uses `defineVitestConfig` with `environment: 'nuxt'` and excludes `tests/e2e`. API calls are mocked with `registerEndpoint` from `@nuxt/test-utils/runtime`.
+`vitest.config.ts` defines one `defineVitestProject` project with `environment: 'nuxt'` that includes `tests/nuxt/**/*.spec.ts`; Playwright owns `tests/e2e`. API calls are mocked with `registerEndpoint` from `@nuxt/test-utils/runtime`.
 
-`tests/ApplicantReviewCard.spec.ts`:
+`tests/nuxt/ApplicantReviewCard.spec.ts`:
 - Renders name, score, formatted date and the first 3 highlights.
 - Badge classes for each tier, "Not scored" for null.
 - Clicking Shortlist emits `update-status` with `shortlisted`; buttons are disabled while `pending`.
 - View Details toggles `aria-expanded` and shows the email.
 
-`tests/ApplicantReviewBoard.spec.ts`:
+`tests/nuxt/ApplicantReviewBoard.spec.ts`:
 - Shows skeletons, then the applicants from the mocked endpoint.
 - Moving the slider to 80 sends `min_score=80` and the DOM shows only the filtered applicants.
 - Shortlist shows "Shortlisted" before the PATCH resolves.
