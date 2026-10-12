@@ -21,7 +21,7 @@ class Applicant
     private ApplicantStatus $status = ApplicantStatus::Pending;
 
     /**
-     * @param list<string> $highlights
+     * @param  list<string>  $highlights
      */
     public function __construct(
         #[ORM\ManyToOne(targetEntity: Campaign::class)]

@@ -13,7 +13,7 @@ class TypeScriptTransformerServiceProvider extends BaseTypeScriptTransformerServ
     protected function configure(TypeScriptTransformerConfigFactory $config): void
     {
         $config
-            ->extension(new LaravelDataTypeScriptTransformerExtension())
+            ->extension(new LaravelDataTypeScriptTransformerExtension)
             ->transformer(new EnumTransformer(useUnionEnums: true))
             ->transformDirectories(app_path('Data'), app_path('Enums'))
             ->outputDirectory(base_path('../frontend/types'))

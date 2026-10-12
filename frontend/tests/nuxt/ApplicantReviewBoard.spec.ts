@@ -76,7 +76,9 @@ beforeEach(() => {
 describe('ApplicantReviewBoard', () => {
   it('shows skeletons first, then the applicants from the API', async () => {
     let release!: () => void
-    unfilteredGate = new Promise((resolve) => { release = resolve })
+    unfilteredGate = new Promise((resolve) => {
+      release = resolve
+    })
 
     const wrapper = await mountSuspended(ApplicantReviewBoard, { props: { campaignId: CAMPAIGN } })
 
@@ -106,7 +108,9 @@ describe('ApplicantReviewBoard', () => {
     lastPage = 2
     const wrapper = await mountBoard()
     let release!: () => void
-    unfilteredGate = new Promise((resolve) => { release = resolve })
+    unfilteredGate = new Promise((resolve) => {
+      release = resolve
+    })
 
     await button(wrapper, 'Next').trigger('click')
     await vi.waitFor(() => expect(summaryQueries).toHaveLength(2))
@@ -157,7 +161,9 @@ describe('ApplicantReviewBoard', () => {
 
   it('ignores a slow response from an older request', async () => {
     let release!: () => void
-    unfilteredGate = new Promise((resolve) => { release = resolve })
+    unfilteredGate = new Promise((resolve) => {
+      release = resolve
+    })
 
     const wrapper = await mountSuspended(ApplicantReviewBoard, { props: { campaignId: CAMPAIGN } })
     await wrapper.get('input[type="range"]').setValue('80')
@@ -173,7 +179,9 @@ describe('ApplicantReviewBoard', () => {
 
   it('shows the new status before the PATCH resolves', async () => {
     let release!: () => void
-    patchGate = new Promise((resolve) => { release = resolve })
+    patchGate = new Promise((resolve) => {
+      release = resolve
+    })
     const wrapper = await mountBoard()
 
     await button(cards(wrapper)[0]!, 'Shortlist').trigger('click')
@@ -189,7 +197,9 @@ describe('ApplicantReviewBoard', () => {
 
   it('keeps the confirmed status when the list reloads during the PATCH', async () => {
     let release!: () => void
-    patchGate = new Promise((resolve) => { release = resolve })
+    patchGate = new Promise((resolve) => {
+      release = resolve
+    })
     const wrapper = await mountBoard()
 
     await button(cards(wrapper)[0]!, 'Shortlist').trigger('click')

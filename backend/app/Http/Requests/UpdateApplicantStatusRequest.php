@@ -17,6 +17,9 @@ class UpdateApplicantStatusRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, list<mixed>>
+     */
     public function rules(): array
     {
         return [
@@ -45,6 +48,9 @@ class UpdateApplicantStatusRequest extends FormRequest
 
     private function applicant(): Applicant
     {
-        return $this->route('applicant');
+        $applicant = $this->route('applicant');
+        assert($applicant instanceof Applicant);
+
+        return $applicant;
     }
 }

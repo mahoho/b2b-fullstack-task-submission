@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 class ApplicantRepositoryTest extends TestCase
 {
-    use RefreshesDoctrineSchema, CreatesEntities;
+    use CreatesEntities, RefreshesDoctrineSchema;
 
     public function test_aggregates_come_back_as_a_typed_dto(): void
     {

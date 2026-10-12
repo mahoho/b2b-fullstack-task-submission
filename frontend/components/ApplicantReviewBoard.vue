@@ -104,7 +104,7 @@ const emptyMessage = computed(() => minScore.value > 0
         <ApplicantReviewCard
           :applicant="applicant"
           :pending="pendingIds.has(applicant.id)"
-          :error="actionErrors[applicant.id] ?? null"
+          :error="actionErrors.get(applicant.id) ?? null"
           @update-status="status => setStatus(applicant.id, status)"
         />
       </li>

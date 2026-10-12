@@ -1,0 +1,14 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+    - vendor/phpstan/phpstan-doctrine/rules.neon
+
+parameters:
+    level: 8
+    paths:
+        - app
+        - database
+        - routes
+        - tests
+    doctrine:
+        objectManagerLoader: tests/PHPStan/object-manager.php

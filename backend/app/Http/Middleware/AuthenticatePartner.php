@@ -21,7 +21,7 @@ class AuthenticatePartner
             : $this->em->getRepository(Partner::class)->findOneBy(['apiTokenHash' => hash('sha256', $token)]);
 
         if ($partner === null) {
-            throw new AuthenticationException();
+            throw new AuthenticationException;
         }
 
         $request->attributes->set('partner', $partner);

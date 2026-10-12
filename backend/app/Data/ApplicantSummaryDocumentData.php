@@ -7,7 +7,7 @@ use Spatie\LaravelData\Data;
 class ApplicantSummaryDocumentData extends Data
 {
     /**
-     * @param list<ApplicantResourceData> $data
+     * @param  list<ApplicantResourceData>  $data
      */
     public function __construct(
         public array $data,

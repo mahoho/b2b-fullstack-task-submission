@@ -11,7 +11,7 @@ use Tests\TestCase;
 
 class DoctrineMappingTest extends TestCase
 {
-    use RefreshesDoctrineSchema, CreatesEntities;
+    use CreatesEntities, RefreshesDoctrineSchema;
 
     public function test_mapping_is_valid(): void
     {
@@ -27,6 +27,7 @@ class DoctrineMappingTest extends TestCase
 
         $reloaded = $this->em->find(Applicant::class, $id);
 
+        $this->assertInstanceOf(Applicant::class, $reloaded);
         $this->assertSame('Ada Lovelace', $reloaded->getFullName());
         $this->assertSame('ada.lovelace@example.com', $reloaded->getEmail());
         $this->assertSame(88, $reloaded->getAiScore());
@@ -42,6 +43,8 @@ class DoctrineMappingTest extends TestCase
         $id = $this->makeApplicant($this->makeCampaign($this->makePartner()), null)->getId();
         $this->em->clear();
 
-        $this->assertNull($this->em->find(Applicant::class, $id)->getAiScore());
+        $reloaded = $this->em->find(Applicant::class, $id);
+        $this->assertInstanceOf(Applicant::class, $reloaded);
+        $this->assertNull($reloaded->getAiScore());
     }
 }

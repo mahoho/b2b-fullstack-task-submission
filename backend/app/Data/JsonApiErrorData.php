@@ -10,8 +10,8 @@ class JsonApiErrorData extends Data
     public function __construct(
         public string $status,
         public string $title,
-        public string|Optional $detail = new Optional(),
-        public string|Optional $code = new Optional(),
-        public JsonApiErrorSourceData|Optional $source = new Optional(),
+        public string|Optional $detail = new Optional,
+        public string|Optional $code = new Optional,
+        public JsonApiErrorSourceData|Optional $source = new Optional,
     ) {}
 }

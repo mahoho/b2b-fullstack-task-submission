@@ -86,6 +86,9 @@ final class Version20261012000000 extends AbstractMigration
         }
     }
 
+    /**
+     * @param  non-empty-string  $name
+     */
     private function column(string $name, string $type, ?int $length = null, bool $notNull = true, mixed $default = null): Column
     {
         return Column::editor()
@@ -103,13 +106,19 @@ final class Version20261012000000 extends AbstractMigration
     }
 
     /**
-     * @param list<string> $columns
+     * @param  non-empty-string  $name
+     * @param  non-empty-list<non-empty-string>  $columns
      */
     private function index(string $name, array $columns, IndexType $type = IndexType::REGULAR): Index
     {
         return Index::editor()->setUnquotedName($name)->setUnquotedColumnNames(...$columns)->setType($type)->create();
     }
 
+    /**
+     * @param  non-empty-string  $name
+     * @param  non-empty-string  $column
+     * @param  non-empty-string  $referencedTable
+     */
     private function foreignKey(string $name, string $column, string $referencedTable): ForeignKeyConstraint
     {
         return ForeignKeyConstraint::editor()

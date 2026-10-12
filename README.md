@@ -62,7 +62,7 @@ curl -g -H 'Authorization: Bearer demo-partner-token' \
   'http://127.0.0.1:8000/api/v1/campaigns/0b8f3c2e-5a61-4c7d-9e2a-3f4b5c6d7e81/applicant-summary?min_score=80&page[size]=5'
 ```
 
-Run the tests with `php artisan test`.
+Run the tests with `php artisan test`. `composer analyse` runs PHPStan at level 8 (with Larastan and phpstan-doctrine), `composer lint` checks the code style with Pint, and `composer format` fixes it.
 
 The frontend's API types in `frontend/types/api.ts` are generated from the DTOs in `app/Data` and the enums in `app/Enums`. After changing either, run `composer types`.
 
@@ -83,6 +83,8 @@ Open http://localhost:3000, which redirects to the demo campaign. The Nuxt serve
 ```bash
 npm test                          # Vitest component tests
 npm run typecheck
+npm run lint                      # ESLint, style rules included
+npm run lint:fix                  # fixes what it can
 npx playwright install chromium   # once
 npm run test:e2e                  # Playwright tests with the API mocked
 ```
