@@ -7,6 +7,13 @@ export default defineEventHandler((event) => {
 
   const { apiBase, apiToken } = useRuntimeConfig(event)
 
+  // There are no defaults, so a missing setting fails loudly instead of forwarding a request with an empty token.
+  // The setting names go to the server log only; the browser gets a generic message.
+  if (!apiBase || !apiToken) {
+    console.error('API proxy is not configured: set NUXT_API_BASE and NUXT_API_TOKEN (see frontend/.env.example).')
+    throw createError({ statusCode: 500, statusMessage: 'API proxy is not configured' })
+  }
+
   return proxyRequest(event, apiBase + event.path, {
     headers: { Authorization: `Bearer ${apiToken}` },
   })

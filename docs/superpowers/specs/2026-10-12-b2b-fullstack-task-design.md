@@ -207,7 +207,7 @@ Test DB: SQLite in memory. A `RefreshesDoctrineSchema` trait rebuilds the schema
 `nuxt.config.ts` sets `srcDir: '.'` so the folders match the PDF tree: `components/`, `composables/`, `pages/`, `server/`, `types/`, `tests/`, `assets/css/main.css` (`@import "tailwindcss";`).
 
 Runtime config:
-- `apiBase` (`NUXT_API_BASE`, default `http://127.0.0.1:8000`) and `apiToken` (`NUXT_API_TOKEN`, default `demo-partner-token`). Server only.
+- `apiBase` (`NUXT_API_BASE`) and `apiToken` (`NUXT_API_TOKEN`), server only, read from `frontend/.env`, with `frontend/.env.example` committed holding the local demo values (change request #5). There are no defaults in the code; when either is missing the proxy answers 500 "API proxy is not configured" and logs which setting to add.
 - `public.demoCampaignId` (`NUXT_PUBLIC_DEMO_CAMPAIGN_ID`, default the seeded demo id).
 
 Styling is Tailwind utilities in templates. No `<style>` blocks in `.vue` files; if a component ever needs CSS that utilities cannot express, it goes in its own partial imported from `assets/css/main.css`.
