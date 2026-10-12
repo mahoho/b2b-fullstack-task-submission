@@ -1,0 +1,7 @@
+.DS_Store
+.idea/
+.worktrees/
+.claude/worktrees/
+*.mp4
+*.webm
+*.gif
