@@ -1,11 +1,11 @@
 <?php
-// app/Http/Input/UpdateApplicantStatusData.php
 
 namespace App\Http\Input;
 
 use App\Enums\ApplicantStatus;
+use Spatie\LaravelData\Data;
 
-class UpdateApplicantStatusData
+class UpdateApplicantStatusData extends Data
 {
     public function __construct(
         public string $applicantId,

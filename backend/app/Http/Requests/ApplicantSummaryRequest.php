@@ -1,5 +1,4 @@
 <?php
-// app/Http/Requests/ApplicantSummaryRequest.php
 
 namespace App\Http\Requests;
 
@@ -8,14 +7,16 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class ApplicantSummaryRequest extends FormRequest
 {
+    // The partner middleware has already authenticated the caller; ownership is checked in the service.
     public function authorize(): bool
     {
         return true;
     }
 
-    protected function prepareForValidation(): void
+    // Validates the route id together with the query, without writing it into the query itself.
+    public function validationData(): array
     {
-        $this->merge(['campaignId' => $this->route('campaignId')]);
+        return [...$this->query(), 'campaignId' => $this->route('campaignId')];
     }
 
     public function rules(): array
@@ -35,13 +36,13 @@ class ApplicantSummaryRequest extends FormRequest
 
     public function toData(): ApplicantSummaryQueryData
     {
-        $v = $this->validated();
+        $minScore = $this->validated('min_score');
 
         return new ApplicantSummaryQueryData(
-            campaignId: $v['campaignId'],
-            minScore: isset($v['min_score']) ? (int) $v['min_score'] : null,
-            pageSize: (int) ($v['page']['size'] ?? 10),
-            pageNumber: (int) ($v['page']['number'] ?? 1),
+            campaignId: $this->validated('campaignId'),
+            minScore: $minScore === null ? null : (int) $minScore,
+            pageSize: (int) $this->validated('page.size', 10),
+            pageNumber: (int) $this->validated('page.number', 1),
         );
     }
 }

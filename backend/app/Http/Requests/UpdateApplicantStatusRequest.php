@@ -1,5 +1,4 @@
 <?php
-// app/Http/Requests/UpdateApplicantStatusRequest.php
 
 namespace App\Http\Requests;
 
@@ -10,14 +9,16 @@ use Illuminate\Validation\Rule;
 
 class UpdateApplicantStatusRequest extends FormRequest
 {
+    // The partner middleware has already authenticated the caller; ownership is checked in the controller.
     public function authorize(): bool
     {
         return true;
     }
 
-    protected function prepareForValidation(): void
+    // Validates the route id together with the body, without writing it into the body itself.
+    public function validationData(): array
     {
-        $this->merge(['applicantId' => $this->route('applicantId')]);
+        return [...$this->all(), 'applicantId' => $this->route('applicantId')];
     }
 
     public function rules(): array
@@ -37,13 +38,11 @@ class UpdateApplicantStatusRequest extends FormRequest
 
     public function toData(): UpdateApplicantStatusData
     {
-        $v = $this->validated();
-
         return new UpdateApplicantStatusData(
-            applicantId: $v['applicantId'],
-            type: $v['data']['type'],
-            id: $v['data']['id'],
-            status: ApplicantStatus::from($v['data']['attributes']['status']),
+            applicantId: $this->validated('applicantId'),
+            type: $this->validated('data.type'),
+            id: $this->validated('data.id'),
+            status: ApplicantStatus::from($this->validated('data.attributes.status')),
         );
     }
 }

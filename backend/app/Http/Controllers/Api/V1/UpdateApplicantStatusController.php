@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/Api/V1/UpdateApplicantStatusController.php
 
 namespace App\Http\Controllers\Api\V1;
 

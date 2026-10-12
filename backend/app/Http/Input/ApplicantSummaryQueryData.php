@@ -1,9 +1,10 @@
 <?php
-// app/Http/Input/ApplicantSummaryQueryData.php
 
 namespace App\Http\Input;
 
-class ApplicantSummaryQueryData
+use Spatie\LaravelData\Data;
+
+class ApplicantSummaryQueryData extends Data
 {
     public function __construct(
         public string $campaignId,
