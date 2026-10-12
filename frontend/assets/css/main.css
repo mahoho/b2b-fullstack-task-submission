@@ -1,18 +1,13 @@
-/* frontend/assets/css/main.css */
 @import "tailwindcss";
 
-/* Tailwind 4 preflight resets buttons to cursor: default. */
+/* Tailwind 4's preflight leaves buttons on the default arrow. Enabled controls get the pointer, disabled ones not-allowed. */
 @layer base {
   button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  input[type="range"]:not(:disabled),
-  select:not(:disabled),
-  summary {
+  input[type="range"]:not(:disabled) {
     cursor: pointer;
   }
 
-  button:disabled,
-  [role="button"][aria-disabled="true"] {
+  button:disabled {
     cursor: not-allowed;
   }
 }

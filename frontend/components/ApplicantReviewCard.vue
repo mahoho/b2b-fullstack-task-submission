@@ -48,7 +48,7 @@ const scoreLabel = computed(() => attributes.value.aiScore === null
   ? 'AI match score not available yet'
   : `AI match score ${attributes.value.aiScore} out of 100, ${tierLabels[attributes.value.tier]}`)
 
-const actionClasses = 'rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+const actionClasses = 'rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50'
 </script>
 
 <template>
