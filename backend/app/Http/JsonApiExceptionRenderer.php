@@ -1,0 +1,74 @@
+<?php
+
+namespace App\Http;
+
+use App\Data\JsonApiErrorData;
+use App\Data\JsonApiErrorDocumentData;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Spatie\LaravelData\Optional;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Throwable;
+
+class JsonApiExceptionRenderer
+{
+    private const ROUTE_IDENTIFIERS = ['campaignId', 'applicantId'];
+
+    public function __invoke(Throwable $e, Request $request): ?JsonResponse
+    {
+        if (! $request->is('api/*')) {
+            return null;
+        }
+
+        [$status, $errors, $headers] = match (true) {
+            $e instanceof ValidationException => [422, $this->validationErrors($e), []],
+            $e instanceof AuthenticationException => [
+                401,
+                [new JsonApiErrorData('401', 'Unauthenticated', 'A valid bearer token is required.')],
+                ['WWW-Authenticate' => 'Bearer'],
+            ],
+            $e instanceof HttpExceptionInterface => [$e->getStatusCode(), [$this->httpError($e)], $e->getHeaders()],
+            default => [500, [new JsonApiErrorData('500', 'Server Error')], []],
+        };
+
+        return new JsonResponse(
+            (new JsonApiErrorDocumentData($errors))->toArray(),
+            $status,
+            ['Content-Type' => 'application/vnd.api+json'] + $headers,
+        );
+    }
+
+    private function httpError(HttpExceptionInterface $e): JsonApiErrorData
+    {
+        $status = $e->getStatusCode();
+
+        return new JsonApiErrorData(
+            status: (string) $status,
+            title: Response::$statusTexts[$status] ?? 'Error',
+            detail: $e->getMessage() !== '' ? $e->getMessage() : new Optional(),
+        );
+    }
+
+    /**
+     * @return list<JsonApiErrorData>
+     */
+    private function validationErrors(ValidationException $e): array
+    {
+        $errors = [];
+
+        foreach ($e->errors() as $key => $messages) {
+            foreach ($messages as $message) {
+                $errors[] = match (true) {
+                    in_array($key, self::ROUTE_IDENTIFIERS, true) => new JsonApiErrorData('422', 'Invalid identifier', $message, code: 'invalid_identifier'),
+                    str_starts_with($key, 'data.') => new JsonApiErrorData('422', 'Invalid attribute', $message, source: ['pointer' => '/'.str_replace('.', '/', $key)]),
+                    default => new JsonApiErrorData('422', 'Invalid parameter', $message, source: ['parameter' => preg_replace('/\.([^.]+)/', '[$1]', $key)]),
+                };
+            }
+        }
+
+        return $errors;
+    }
+}
