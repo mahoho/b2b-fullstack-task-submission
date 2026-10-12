@@ -55,7 +55,7 @@ php artisan serve
 
 The seeder creates a demo partner with the bearer token `demo-partner-token`, a campaign with 24 applicants (`0b8f3c2e-5a61-4c7d-9e2a-3f4b5c6d7e81`) and an empty campaign (`7d1e9a40-2b3c-4d5e-8f60-718293a4b5c6`).
 
-`-g` stops curl from reading the brackets in `page[size]` as a URL pattern.
+The list also takes `status` (`pending`, `shortlisted` or `rejected`) and `search` (part of a name or email, any case). Like `min_score`, they narrow the list but not the summary. `-g` stops curl from reading the brackets in `page[size]` as a URL pattern.
 
 ```bash
 curl -g -H 'Authorization: Bearer demo-partner-token' \

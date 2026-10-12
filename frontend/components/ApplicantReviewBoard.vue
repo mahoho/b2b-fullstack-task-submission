@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { ApplicantStatus } from '~/types/api'
-
 const props = defineProps<{ campaignId: string }>()
 
 const {
@@ -20,12 +18,6 @@ const {
 } = useApplicantReview(props.campaignId)
 
 onMounted(load)
-
-const statusOptions: { value: ApplicantStatus, label: string }[] = [
-  { value: 'pending', label: 'Pending review' },
-  { value: 'shortlisted', label: 'Shortlisted' },
-  { value: 'rejected', label: 'Rejected' },
-]
 
 // Skeletons only for the very first load. Later reloads keep the list in place, so nothing jumps.
 const initialLoading = computed(() => loading.value && !pageMeta.value)
@@ -74,11 +66,11 @@ const emptyMessage = computed(() => {
           All statuses
         </option>
         <option
-          v-for="option in statusOptions"
-          :key="option.value"
-          :value="option.value"
+          v-for="(label, value) in statusLabels"
+          :key="value"
+          :value="value"
         >
-          {{ option.label }}
+          {{ label }}
         </option>
       </select>
 

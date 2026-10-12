@@ -73,7 +73,8 @@ export function useApplicantReview(campaignId: string) {
 
   let debounce: ReturnType<typeof setTimeout> | undefined
 
-  watch([minScore, status, search], () => {
+  // The trimmed term, so spaces around it do not reload the list.
+  watch([minScore, status, () => search.value.trim()], () => {
     clearTimeout(debounce)
     debounce = setTimeout(() => {
       if (page.value === 1) load()

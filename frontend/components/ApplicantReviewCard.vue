@@ -23,12 +23,6 @@ const tierLabels: Record<ScoreTier, string> = {
   unscored: 'not scored yet',
 }
 
-const statusLabels: Record<ApplicantStatus, string> = {
-  pending: 'Pending review',
-  shortlisted: 'Shortlisted',
-  rejected: 'Rejected',
-}
-
 const statusClasses: Record<ApplicantStatus, string> = {
   pending: 'bg-gray-100 text-gray-800',
   shortlisted: 'bg-emerald-100 text-emerald-800',

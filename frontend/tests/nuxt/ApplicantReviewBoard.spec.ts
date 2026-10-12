@@ -184,6 +184,12 @@ describe('ApplicantReviewBoard', () => {
     expect(summaryQueries.length - before).toBe(1)
     expect(summaryQueries.at(-1)).toEqual({ 'search': 'ada', 'page[number]': '1', 'page[size]': '10' })
 
+    // Spaces around the term do not change the search, so they do not reload the list.
+    const settled = summaryQueries.length
+    await box.setValue('ada ')
+    await new Promise(resolve => setTimeout(resolve, 300))
+    expect(summaryQueries).toHaveLength(settled)
+
     await box.setValue('   ')
 
     await vi.waitFor(() => expect(cards(wrapper)).toHaveLength(2))
