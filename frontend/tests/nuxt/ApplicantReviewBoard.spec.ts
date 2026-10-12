@@ -102,6 +102,22 @@ describe('ApplicantReviewBoard', () => {
     await vi.waitFor(() => expect(summaryQueries.at(-1)).toMatchObject({ 'min_score': '80', 'page[number]': '1' }))
   })
 
+  it('keeps the list in place while the next page loads', async () => {
+    lastPage = 2
+    const wrapper = await mountBoard()
+    let release!: () => void
+    unfilteredGate = new Promise((resolve) => { release = resolve })
+
+    await button(wrapper, 'Next').trigger('click')
+    await vi.waitFor(() => expect(summaryQueries).toHaveLength(2))
+    await flushPromises()
+
+    expect(wrapper.findAll('[data-testid="skeleton"]')).toHaveLength(0)
+    expect(cards(wrapper)).toHaveLength(2)
+    release()
+    await vi.waitFor(() => expect(wrapper.get('nav[aria-label="Pagination"]').text()).toContain('Page 2 of 2'))
+  })
+
   it('says the campaign was not found instead of offering a retry', async () => {
     const wrapper = await mountSuspended(ApplicantReviewBoard, { props: { campaignId: MISSING_CAMPAIGN } })
 
