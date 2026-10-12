@@ -100,13 +100,30 @@ class UpdateApplicantStatusTest extends TestCase
         );
     }
 
-    public function test_malformed_applicant_id_is_an_invalid_identifier(): void
+    public function test_malformed_applicant_id_is_not_found(): void
     {
         $this->makePartner(self::TOKEN);
 
         $this->patchStatus('not-a-uuid', 'shortlisted')
+            ->assertNotFound()
+            ->assertJsonPath('errors.0.detail', 'Applicant not found.');
+    }
+
+    public function test_an_array_as_body_id_is_rejected_not_a_crash(): void
+    {
+        $id = $this->ownApplicant()->getId();
+
+        $this->withToken(self::TOKEN)
+            ->patchJson("/api/v1/applicants/{$id}", ['data' => ['type' => 'applicants', 'id' => [$id], 'attributes' => ['status' => 'shortlisted']]])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.0.code', 'invalid_identifier');
+            ->assertJsonPath('errors.0.source.pointer', '/data/id');
+    }
+
+    public function test_uppercase_route_id_with_a_lowercase_body_id_is_accepted(): void
+    {
+        $id = $this->ownApplicant()->getId();
+
+        $this->patchStatus(strtoupper($id), 'shortlisted', $id)->assertOk()->assertJsonPath('data.attributes.status', 'shortlisted');
     }
 
     public function test_another_partners_applicant_is_not_found(): void

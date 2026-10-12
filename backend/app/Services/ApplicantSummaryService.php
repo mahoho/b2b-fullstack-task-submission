@@ -11,23 +11,16 @@ use App\Data\PaginationLinksData;
 use App\Data\TopTierApplicantData;
 use App\Entities\Applicant;
 use App\Entities\Campaign;
-use App\Entities\Partner;
 use App\Http\Input\ApplicantSummaryQueryData;
 use App\Repositories\ApplicantRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ApplicantSummaryService
 {
     public function __construct(private EntityManagerInterface $em) {}
 
-    public function summarize(Partner $partner, ApplicantSummaryQueryData $query, string $url): ApplicantSummaryDocumentData
+    public function summarize(Campaign $campaign, ApplicantSummaryQueryData $query, string $url): ApplicantSummaryDocumentData
     {
-        $campaign = $this->em->getRepository(Campaign::class)->findOneBy([
-            'id' => strtolower($query->campaignId),
-            'partner' => $partner,
-        ]) ?? throw new NotFoundHttpException('Campaign not found.');
-
         /** @var ApplicantRepository $applicants */
         $applicants = $this->em->getRepository(Applicant::class);
         $threshold = $campaign->getEligibilityThreshold();

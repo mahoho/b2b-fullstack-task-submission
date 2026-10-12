@@ -72,7 +72,7 @@ Schema is managed by one Doctrine migration in `database/migrations`, written wi
 
 All routes live in `routes/api.php` under `/api/v1`, behind the `AuthenticatePartner` middleware.
 
-`GET /api/v1/campaigns/{campaignId}/applicant-summary`
+`GET /api/v1/campaigns/{campaign}/applicant-summary`
 
 Query parameters:
 - `min_score`: optional integer 0 to 100. Filters the list to `aiScore >= min_score`, which also leaves out unscored applicants. Does not affect `meta.summary`.
@@ -127,7 +127,7 @@ Summary rules (campaign wide, ignores `min_score`):
 - `meta.page.total` counts the filtered list. `lastPage` is at least 1.
 - Links keep `min_score` when it was given.
 
-`PATCH /api/v1/applicants/{applicantId}`
+`PATCH /api/v1/applicants/{applicant}`
 
 Request body:
 
@@ -147,7 +147,7 @@ Every error from `/api/*` is rendered in one place, `bootstrap/app.php` `withExc
 
 - 401: missing or unknown bearer token. Adds `WWW-Authenticate: Bearer`.
 - 404: campaign or applicant does not exist, or belongs to another partner. Same response either way, so ids cannot be probed.
-- 422 for a malformed `campaignId` or `applicantId` (not a UUID): `code: "invalid_identifier"`, no `source` member, because JSON:API's `source.parameter` refers to query parameters and this is a path segment.
+- 404 for a malformed id as well (change request #2): `{campaign}` and `{applicant}` are resolved by route bindings in `AppServiceProvider` within the authenticated partner, so a malformed, unknown or foreign id gives the same 404. The partner middleware runs before `SubstituteBindings`.
 - 422 for query parameters: one error object per failed rule, `source.parameter` uses the bracket form (`page[size]`, not `page.size`).
 - 422 for the PATCH body: `source.pointer`, for example `/data/attributes/status`.
 - Any other `HttpException` keeps its status. Anything else is a 500 with `title: "Server Error"` and no detail; the exception is logged.
@@ -156,20 +156,20 @@ Every error from `/api/*` is rendered in one place, `bootstrap/app.php` `withExc
 
 - `app/Http/Middleware/AuthenticatePartner.php`: reads `Authorization: Bearer <token>`, looks up the Partner by `hash('sha256', $token)`, puts it on the request (`$request->attributes->set('partner', $partner)`), throws `AuthenticationException` otherwise.
 - `app/Http/Middleware/JsonApiContentType.php`: sets `Content-Type: application/vnd.api+json` on every `/api` response.
-- FormRequest classes in `app/Http/Requests/` validate before the controller runs, and each has a `toData()` that builds the typed input DTO. `validationData()` adds the route id to the validated data without writing it into the request:
-  - `ApplicantSummaryRequest`: `campaignId` (route, uuid), `min_score` (nullable integer 0 to 100), `page.size` (integer 1 to 50, default 10), `page.number` (integer at least 1, default 1).
-  - `UpdateApplicantStatusRequest`: `applicantId` (route, uuid), `data.type` (must be `applicants`), `data.id` (must equal `applicantId`), `data.attributes.status` (`ApplicantStatus` enum).
+- FormRequest classes in `app/Http/Requests/` validate the query or body before the controller runs, and each has a `toData()` that builds the typed input DTO. The bound entity, not an id, reaches the controller:
+  - `ApplicantSummaryRequest`: `min_score` (nullable integer 0 to 100), `page.size` (integer 1 to 50, default 10), `page.number` (integer at least 1, default 1).
+  - `UpdateApplicantStatusRequest`: `data.type` (must be `applicants`), `data.id` (a string equal to the bound applicant's id, case-insensitive), `data.attributes.status` (`ApplicantStatus` enum).
   - No `exists` rules, since those go through Laravel's query builder rather than Doctrine. Existence and ownership are checked in the service.
-- Input DTOs in `app/Http/Input/` (outside `app/Data`, so they stay out of the generated TypeScript): `ApplicantSummaryQueryData` (`campaignId`, `minScore`, `pageSize`, `pageNumber`) and `UpdateApplicantStatusData` (`applicantId`, `type`, `id`, `status`), plain laravel-data objects with no validation attributes.
+- Input DTOs in `app/Http/Input/` (outside `app/Data`, so they stay out of the generated TypeScript): `ApplicantSummaryQueryData` (`minScore`, `pageSize`, `pageNumber`) and `UpdateApplicantStatusData` (`status`), plain laravel-data objects with no validation attributes.
 - Output DTOs in `app/Data/`, each marked for TypeScript generation:
   - `ApplicantAttributesData` (name, email, aiScore, tier, status, appliedAt, highlights) and `ApplicantResourceData` (`type`, `id`, `attributes`), built from an Applicant entity plus the campaign's eligibility threshold, so the tier is computed without touching the lazy `campaign` association per row.
   - `TopTierApplicantData`, `ApplicantSummaryData`, `PageMetaData`, `PaginationLinksData`.
   - `ApplicantSummaryDocumentData` (`data`, `meta.summary`, `meta.page`, `links`) and `ApplicantDocumentData` (`data`) for the PATCH response.
   - `JsonApiErrorData` and `JsonApiErrorDocumentData`, used by the exception renderer. Members the spec leaves out (`code`, `source`, `detail`) are laravel-data `Optional`, so they are absent from the JSON and optional in TypeScript.
 - `app/Repositories/ApplicantRepository.php` (Doctrine `EntityRepository`, set as the Applicant `repositoryClass`). Four queries per summary request, whatever the campaign size: one DQL aggregate (`COUNT`, `SUM(CASE WHEN aiScore >= :threshold ...)`, `AVG(aiScore)`), one top tier query, one page query with `setFirstResult`/`setMaxResults`, one filtered count. Nothing is loaded into PHP to be counted.
-- `app/Services/ApplicantSummaryService.php`: takes the partner and `ApplicantSummaryQueryData`, finds the campaign for the partner (404 otherwise), calls the repository, applies the summary rules (null average -> 0, rounding) and returns `ApplicantSummaryDocumentData`.
+- `app/Services/ApplicantSummaryService.php`: takes the bound `Campaign` and `ApplicantSummaryQueryData`, calls the repository, applies the summary rules (null average -> 0, rounding) and returns `ApplicantSummaryDocumentData`.
 - `app/Http/Controllers/Api/V1/ApplicantSummaryController.php` and `UpdateApplicantStatusController.php`: invokable, a few lines each, return the document DTO.
-- Validation errors come from the FormRequests keyed by input name (`min_score`, `page.size`, `data.attributes.status`). The renderer turns query keys into bracket form for `source.parameter` and body keys into JSON pointers for `source.pointer`, and maps the route id keys to `invalid_identifier`.
+- Validation errors come from the FormRequests keyed by input name (`min_score`, `page.size`, `data.attributes.status`). The renderer turns query keys into bracket form for `source.parameter` and body keys into JSON pointers for `source.pointer`.
 
 ### TypeScript generation
 
@@ -183,7 +183,7 @@ Test DB: SQLite in memory. A `RefreshesDoctrineSchema` trait rebuilds the schema
 - 200 with exact `totalApplicants`, `eligibleApplicants`, `averageAiScore`, `topTier`, list order and JSON:API content type.
 - `min_score=80` filters `data` and `meta.page.total` but leaves `meta.summary` unchanged.
 - Pagination: `page[size]=2&page[number]=2` returns the right slice, `meta.page`, and `prev`/`next`/`last` links.
-- 422 for a non-UUID campaign id (`code: invalid_identifier`).
+- 404 for a non-UUID campaign id, the same body as an unknown one.
 - 422 for `page[size]=0`, `page[size]=51`, `page[number]=0`, `min_score=101`, `min_score=abc`, each with the bracket-form `source.parameter`.
 - 404 for an unknown UUID, and for another partner's campaign.
 - 401 without a token and with a wrong token.

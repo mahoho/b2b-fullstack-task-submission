@@ -22,7 +22,6 @@ class JsonApiErrorsTest extends TestCase
             Route::get('missing', fn () => abort(404, 'Campaign not found.'));
             Route::get('boom', fn () => throw new RuntimeException('database password is hunter2'));
             Route::get('invalid', fn () => throw ValidationException::withMessages([
-                'campaignId' => ['The campaign id field must be a valid UUID.'],
                 'page.size' => ['The page[size] field must be between 1 and 50.'],
                 'min_score' => ['The min score field must be an integer.'],
                 'data.attributes.status' => ['The selected status is invalid.'],
@@ -87,7 +86,7 @@ class JsonApiErrorsTest extends TestCase
         $this->assertStringNotContainsString('hunter2', $response->getContent());
     }
 
-    public function test_validation_errors_map_to_identifiers_parameters_and_pointers(): void
+    public function test_validation_errors_map_to_parameters_and_pointers(): void
     {
         $this->makePartner('right-token');
 
@@ -95,7 +94,6 @@ class JsonApiErrorsTest extends TestCase
             ->assertUnprocessable()
             ->assertHeader('Content-Type', 'application/vnd.api+json')
             ->assertExactJson(['errors' => [
-                ['status' => '422', 'title' => 'Invalid identifier', 'detail' => 'The campaign id field must be a valid UUID.', 'code' => 'invalid_identifier'],
                 ['status' => '422', 'title' => 'Invalid parameter', 'detail' => 'The page[size] field must be between 1 and 50.', 'source' => ['parameter' => 'page[size]']],
                 ['status' => '422', 'title' => 'Invalid parameter', 'detail' => 'The min score field must be an integer.', 'source' => ['parameter' => 'min_score']],
                 ['status' => '422', 'title' => 'Invalid attribute', 'detail' => 'The selected status is invalid.', 'source' => ['pointer' => '/data/attributes/status']],
