@@ -22,6 +22,22 @@ and `php artisan db:seed`, then starts the API. Both are safe to repeat, so rest
 is fine. The frontend proxies `/api/v1/**` to the backend with `NUXT_API_BASE` and
 `NUXT_API_TOKEN`, which compose sets.
 
+### Live reload
+
+`docker-compose.override.yml` is picked up automatically. It bind-mounts `backend/` and
+`frontend/` into the containers and runs the frontend with `nuxt dev`. Edit the frontend and
+the browser updates. Edit PHP and the next request runs the new code, because
+`php artisan serve` loads the code fresh on each request.
+
+Dependencies live in named volumes (`frontend-node-modules`, `backend-vendor`). After changing
+`package-lock.json` or `composer.lock`, run `docker compose up --build -V` to refresh them.
+If you add a new PHP route file, config or migration, restart the backend with
+`docker compose restart backend`.
+
+To run the production frontend image instead, skip the override:
+
+    docker compose -f docker-compose.yml up --build
+
 To reset the database, run `docker compose down -v`. That deletes the MySQL volume.
 To stop without losing data, run `docker compose down`.
 

@@ -1,0 +1,22 @@
+services:
+  backend:
+    volumes:
+      - ./backend:/app
+      # The image's vendor/ would be hidden by the bind mount, so keep it in a volume.
+      - backend-vendor:/app/vendor
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+      - /app/.nuxt
+
+volumes:
+  backend-vendor:
+  frontend-node-modules:

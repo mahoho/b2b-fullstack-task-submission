@@ -9,6 +9,17 @@ RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build
 
+# Dev server for docker-compose.override.yml: source is bind-mounted, Nuxt rebuilds on change.
+FROM node:22.23.1 AS dev
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+
+EXPOSE 3000
+# nuxt dev runs its own prepare step on start, so skipping postinstall above is fine.
+CMD ["npx", "nuxt", "dev", "--host", "0.0.0.0", "--port", "3000"]
+
 FROM node:22.23.1-slim
 
 WORKDIR /app
