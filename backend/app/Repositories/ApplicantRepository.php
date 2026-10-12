@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Entities\Applicant;
 use App\Entities\Campaign;
+use App\Entities\Partner;
 use App\Enums\ScoreTier;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -75,6 +76,19 @@ class ApplicantRepository extends EntityRepository
             ->select('COUNT(a.id)')
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    public function findForPartner(string $id, Partner $partner): ?Applicant
+    {
+        return $this->createQueryBuilder('a')
+            ->addSelect('c')
+            ->join('a.campaign', 'c')
+            ->where('a.id = :id')
+            ->andWhere('c.partner = :partner')
+            ->setParameter('id', strtolower($id))
+            ->setParameter('partner', $partner)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     private function filtered(Campaign $campaign, ?int $minScore): QueryBuilder
