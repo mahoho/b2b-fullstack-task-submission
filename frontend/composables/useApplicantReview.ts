@@ -15,6 +15,7 @@ export function useApplicantReview(campaignId: string) {
   const pageMeta = ref<PageMetaData | null>(null)
   const loading = ref(true)
   const loadError = ref(false)
+  const notFound = ref(false)
   const minScore = ref(0)
   const page = ref(1)
   const pendingIds = ref(new Set<string>())
@@ -27,6 +28,7 @@ export function useApplicantReview(campaignId: string) {
     const request = ++latestRequest
     loading.value = true
     loadError.value = false
+    notFound.value = false
 
     try {
       const document = await $fetch<ApplicantSummaryDocumentData>(
@@ -44,9 +46,11 @@ export function useApplicantReview(campaignId: string) {
       applicants.value = document.data
       pageMeta.value = document.meta.page
     }
-    catch {
+    catch (error) {
       if (request !== latestRequest) return
-      loadError.value = true
+      // An unknown campaign, or another partner's, cannot succeed on retry, so it gets its own state.
+      notFound.value = (error as { statusCode?: number }).statusCode === 404
+      loadError.value = !notFound.value
     }
     finally {
       if (request === latestRequest) loading.value = false
@@ -76,15 +80,22 @@ export function useApplicantReview(campaignId: string) {
     pendingIds.value.add(id)
     delete actionErrors.value[id]
 
+    // A filter or page change can replace the list while the PATCH is in flight, so the outcome is
+    // written to whichever row is on screen now, not to the object that was clicked.
+    const current = () => applicants.value.find(candidate => candidate.id === id)
+
     try {
-      await $fetch<ApplicantDocumentData>(`/api/v1/applicants/${encodeURIComponent(id)}`, {
+      const confirmed = await $fetch<ApplicantDocumentData>(`/api/v1/applicants/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/vnd.api+json' },
         body: { data: { type: 'applicants', id, attributes: { status } } },
       })
+      const row = current()
+      if (row) row.attributes.status = confirmed.data.attributes.status
     }
     catch {
-      applicant.attributes.status = previous
+      const row = current()
+      if (row) row.attributes.status = previous
       actionErrors.value[id] = ACTION_ERROR
     }
     finally {
@@ -92,5 +103,5 @@ export function useApplicantReview(campaignId: string) {
     }
   }
 
-  return { applicants, pageMeta, loading, loadError, minScore, page, pendingIds, actionErrors, load, setStatus }
+  return { applicants, pageMeta, loading, loadError, notFound, minScore, page, pendingIds, actionErrors, load, setStatus }
 }

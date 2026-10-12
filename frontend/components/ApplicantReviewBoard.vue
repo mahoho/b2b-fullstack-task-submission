@@ -6,6 +6,7 @@ const {
   pageMeta,
   loading,
   loadError,
+  notFound,
   minScore,
   page,
   pendingIds,
@@ -57,6 +58,14 @@ const emptyMessage = computed(() => minScore.value > 0
         class="h-40 animate-pulse rounded-xl bg-gray-200"
       />
     </div>
+
+    <p
+      v-else-if="notFound"
+      role="alert"
+      class="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800"
+    >
+      Campaign not found.
+    </p>
 
     <div
       v-else-if="loadError"
