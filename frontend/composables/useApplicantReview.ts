@@ -1,113 +1,96 @@
-// composables/useApplicantReview.ts
 import type {
+  ApplicantDocumentData,
   ApplicantResourceData,
   ApplicantStatus,
   ApplicantSummaryDocumentData,
   PageMetaData,
-} from '~/types/api' // adjust to wherever the generated types live
+} from '~/types/api'
 
 const PAGE_SIZE = 10
+const FILTER_DEBOUNCE_MS = 250
+const ACTION_ERROR = 'Could not update the status. Try again.'
 
 export function useApplicantReview(campaignId: string) {
   const applicants = ref<ApplicantResourceData[]>([])
   const pageMeta = ref<PageMetaData | null>(null)
-  const loading = ref(false)
+  const loading = ref(true)
   const loadError = ref(false)
   const minScore = ref(0)
   const page = ref(1)
-  const pendingIds = ref<Set<string>>(new Set())
+  const pendingIds = ref(new Set<string>())
   const actionErrors = ref<Record<string, string>>({})
 
-  // Only the latest request may write state, so a slow older response cannot overwrite a newer one.
-  let loadSeq = 0
+  // Only the newest request may write to state, so a slow early response cannot replace a newer result.
+  let latestRequest = 0
 
-  async function load() {
-    const seq = ++loadSeq
+  async function load(): Promise<void> {
+    const request = ++latestRequest
     loading.value = true
     loadError.value = false
+
     try {
-      const res = await $fetch<ApplicantSummaryDocumentData>(
+      const document = await $fetch<ApplicantSummaryDocumentData>(
         `/api/v1/campaigns/${encodeURIComponent(campaignId)}/applicant-summary`,
         {
           query: {
-            min_score: minScore.value,
+            // At 0 the filter is off. Sending min_score=0 would hide applicants the AI has not scored yet.
+            ...(minScore.value > 0 ? { min_score: minScore.value } : {}),
             'page[number]': page.value,
             'page[size]': PAGE_SIZE,
           },
         },
       )
-      if (seq !== loadSeq) return
-      applicants.value = res.data
-      pageMeta.value = res.meta.page
-    } catch {
-      if (seq !== loadSeq) return
+      if (request !== latestRequest) return
+      applicants.value = document.data
+      pageMeta.value = document.meta.page
+    }
+    catch {
+      if (request !== latestRequest) return
       loadError.value = true
-    } finally {
-      if (seq === loadSeq) loading.value = false
+    }
+    finally {
+      if (request === latestRequest) loading.value = false
     }
   }
 
-  async function setStatus(id: string, status: ApplicantStatus) {
-    const applicant = applicants.value.find(a => a.id === id)
+  let debounce: ReturnType<typeof setTimeout> | undefined
+
+  watch(minScore, () => {
+    clearTimeout(debounce)
+    debounce = setTimeout(() => {
+      if (page.value === 1) load()
+      else page.value = 1
+    }, FILTER_DEBOUNCE_MS)
+  })
+
+  watch(page, load)
+
+  onScopeDispose(() => clearTimeout(debounce))
+
+  async function setStatus(id: string, status: ApplicantStatus): Promise<void> {
+    const applicant = applicants.value.find(candidate => candidate.id === id)
     if (!applicant || pendingIds.value.has(id)) return
 
     const previous = applicant.attributes.status
-    const { [id]: _cleared, ...rest } = actionErrors.value
-    actionErrors.value = rest
     applicant.attributes.status = status
-    pendingIds.value = new Set(pendingIds.value).add(id)
+    pendingIds.value.add(id)
+    delete actionErrors.value[id]
 
     try {
-      await $fetch(`/api/v1/applicants/${encodeURIComponent(id)}`, {
+      await $fetch<ApplicantDocumentData>(`/api/v1/applicants/${encodeURIComponent(id)}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/vnd.api+json',
-          Accept: 'application/vnd.api+json',
-        },
-        body: JSON.stringify({
-          data: { type: 'applicants', id, attributes: { status } },
-        }),
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: { data: { type: 'applicants', id, attributes: { status } } },
       })
-    } catch {
-      // Re-find the row: a reload may have replaced the object while the request was in flight.
-      const current = applicants.value.find(a => a.id === id)
-      if (current) current.attributes.status = previous
-      actionErrors.value = {
-        ...actionErrors.value,
-        [id]: 'Could not update the status. Try again.',
-      }
-    } finally {
-      const next = new Set(pendingIds.value)
-      next.delete(id)
-      pendingIds.value = next
+    }
+    catch {
+      applicant.attributes.status = previous
+      actionErrors.value[id] = ACTION_ERROR
+    }
+    finally {
+      pendingIds.value.delete(id)
     }
   }
 
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined
-
-  watch(minScore, () => {
-    clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => {
-      // If not on page 1, changing page triggers the page watcher's reload; otherwise reload here.
-      if (page.value !== 1) page.value = 1
-      else load()
-    }, 250)
-  })
-
-  watch(page, () => load())
-
-  onScopeDispose(() => clearTimeout(debounceTimer))
-
-  return {
-    applicants,
-    pageMeta,
-    loading,
-    loadError,
-    minScore,
-    page,
-    pendingIds,
-    actionErrors,
-    load,
-    setStatus,
-  }
+  return { applicants, pageMeta, loading, loadError, minScore, page, pendingIds, actionErrors, load, setStatus }
 }
