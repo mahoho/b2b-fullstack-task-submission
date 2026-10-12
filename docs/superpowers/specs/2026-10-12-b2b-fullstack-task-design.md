@@ -304,6 +304,7 @@ Prerequisites, then backend steps (`composer install`, copy `.env.example`, `php
 - Nothing is pushed to `origin` until the final state is approved.
 - No screenshots, recordings or scratch scripts are committed.
 - Prose in the report, README and commit messages is plain: no em dashes, no emojis.
+- `composer analyse` (PHPStan level 8, with Larastan and phpstan-doctrine), `composer lint` (Pint, Laravel preset) and `npm run lint` (`@nuxt/eslint` with its style rules, no warnings allowed) pass on every commit that lands on `main` (change request #11). The generated `types/api.ts` is not linted.
 
 ## Out of scope
 
