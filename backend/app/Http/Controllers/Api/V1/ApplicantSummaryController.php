@@ -1,4 +1,3 @@
-// app/Http/Controllers/Api/V1/ApplicantSummaryController.php
 <?php
 
 namespace App\Http\Controllers\Api\V1;

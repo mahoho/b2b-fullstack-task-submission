@@ -1,4 +1,3 @@
-// app/Http/Input/ApplicantSummaryQueryData.php
 <?php
 
 namespace App\Http\Input;

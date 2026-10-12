@@ -1,4 +1,3 @@
-// routes/api.php
 <?php
 
 use App\Http\Controllers\Api\V1\ApplicantSummaryController;

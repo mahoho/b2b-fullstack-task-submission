@@ -1,4 +1,3 @@
-// app/Http/Requests/ApplicantSummaryRequest.php
 <?php
 
 namespace App\Http\Requests;
@@ -8,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class ApplicantSummaryRequest extends FormRequest
 {
-    // The partner middleware has already authenticated the caller and route binding has checked ownership.
+    // The partner middleware has authenticated the caller, and route binding only finds the partner's own campaigns.
     public function authorize(): bool
     {
         return true;

@@ -1,4 +1,3 @@
-// app/Services/ApplicantSummaryService.php
 <?php
 
 namespace App\Services;

@@ -1,4 +1,3 @@
-// app/Http/JsonApiExceptionRenderer.php
 <?php
 
 namespace App\Http;

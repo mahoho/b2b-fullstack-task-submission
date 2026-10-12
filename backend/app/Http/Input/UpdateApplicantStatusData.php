@@ -1,4 +1,3 @@
-// app/Http/Input/UpdateApplicantStatusData.php
 <?php
 
 namespace App\Http\Input;
