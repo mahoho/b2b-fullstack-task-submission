@@ -29,6 +29,12 @@ const statusLabels: Record<ApplicantStatus, string> = {
   rejected: 'Rejected',
 }
 
+const statusClasses: Record<ApplicantStatus, string> = {
+  pending: 'bg-gray-100 text-gray-800',
+  shortlisted: 'bg-emerald-100 text-emerald-800',
+  rejected: 'bg-red-100 text-red-800',
+}
+
 // Fixed locale and UTC so the date reads the same on every machine, including in tests.
 const dateFormat = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
 
@@ -99,7 +105,8 @@ const actionClasses = 'rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:
     >
       <span
         data-testid="status"
-        class="font-medium text-gray-900"
+        class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+        :class="statusClasses[attributes.status]"
       >{{ statusLabels[attributes.status] }}</span>
       <span
         v-if="error"

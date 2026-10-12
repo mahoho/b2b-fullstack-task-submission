@@ -101,6 +101,17 @@ describe('ApplicantReviewCard', () => {
     expect(wrapper.findAll('li')).toHaveLength(4)
   })
 
+  it.each([
+    ['pending', 'Pending review', 'bg-gray-100'],
+    ['shortlisted', 'Shortlisted', 'bg-emerald-100'],
+    ['rejected', 'Rejected', 'bg-red-100'],
+  ] as const)('shows the %s status as a coloured pill', async (statusValue, label, colour) => {
+    const pill = (await mountCard({ status: statusValue })).get('[data-testid="status"]')
+
+    expect(pill.text()).toBe(label)
+    expect(pill.classes()).toEqual(expect.arrayContaining(['rounded-full', colour]))
+  })
+
   it('announces an action error in the live region', async () => {
     const wrapper = await mountCard({}, { error: 'Could not update the status. Try again.' })
 
