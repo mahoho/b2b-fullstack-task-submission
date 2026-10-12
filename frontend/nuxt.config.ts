@@ -4,7 +4,20 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-10-01',
   srcDir: '.',
   devtools: { enabled: false },
-  modules: ['@nuxt/test-utils/module'],
+  modules: [
+    '@nuxt/test-utils/module',
+    ['@nuxt/eslint', {
+      config: {
+        stylistic: {
+          semi: false,
+          quotes: 'single',
+          indent: 2,
+          commaDangle: 'always-multiline',
+          braceStyle: 'stroustrup',
+        },
+      },
+    }],
+  ],
   css: ['~/assets/css/main.css'],
   vite: { plugins: [tailwindcss()] },
   runtimeConfig: {
