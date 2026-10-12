@@ -76,6 +76,8 @@ All routes live in `routes/api.php` under `/api/v1`, behind the `AuthenticatePar
 
 Query parameters:
 - `min_score`: optional integer 0 to 100. Filters the list to `aiScore >= min_score`, which also leaves out unscored applicants. Does not affect `meta.summary`.
+- `status`: optional, one of `pending`, `shortlisted`, `rejected`. Filters the list to that status. Does not affect `meta.summary` (change request #12).
+- `search`: optional string up to 100 characters, trimmed; blank means no filter. Case-insensitive substring of the name or the email, with `%` and `_` matched literally. Does not affect `meta.summary` (change request #12).
 - `page[size]`: optional integer 1 to 50, default 10.
 - `page[number]`: optional integer, at least 1, default 1. A page past the last returns 200 with empty `data`.
 
@@ -119,13 +121,13 @@ List order: `aiScore` descending (unscored last), then `appliedAt` ascending, th
 }
 ```
 
-Summary rules (campaign wide, ignores `min_score`):
+Summary rules (campaign wide, ignores `min_score`, `status` and `search`):
 - `totalApplicants`: all applicants in the campaign, scored or not.
 - `eligibleApplicants`: `aiScore >= campaign.eligibilityThreshold`.
 - `averageAiScore`: average over scored applicants only, rounded to 1 decimal. 0 when no applicant is scored, as the PDF asks for zeroed aggregates. PHP encodes a whole float without the fraction, so JSON shows `0`, not `0.0`.
 - `topTier`: up to 3 applicants with `aiScore >= 90`, highest first, then earliest `appliedAt`. Empty list when none.
 - `meta.page.total` counts the filtered list. `lastPage` is at least 1.
-- Links keep `min_score` when it was given.
+- Links keep `min_score`, `status` and `search` when they were given, with the filter values percent-encoded.
 
 `PATCH /api/v1/applicants/{applicant}`
 
@@ -157,7 +159,7 @@ Every error from `/api/*` is rendered in one place, `bootstrap/app.php` `withExc
 - `app/Http/Middleware/AuthenticatePartner.php`: reads `Authorization: Bearer <token>`, looks up the Partner by `hash('sha256', $token)`, puts it on the request (`$request->attributes->set('partner', $partner)`), throws `AuthenticationException` otherwise.
 - `app/Http/Middleware/JsonApiContentType.php`: sets `Content-Type: application/vnd.api+json` on every `/api` response.
 - FormRequest classes in `app/Http/Requests/` validate the query or body before the controller runs, and each has a `toData()` that builds the typed input DTO. The bound entity, not an id, reaches the controller:
-  - `ApplicantSummaryRequest`: `min_score` (nullable integer 0 to 100), `page.size` (integer 1 to 50, default 10), `page.number` (integer at least 1, default 1).
+  - `ApplicantSummaryRequest`: `min_score` (nullable integer 0 to 100), `status` (nullable `ApplicantStatus`), `search` (nullable string, at most 100), `page.size` (integer 1 to 50, default 10), `page.number` (integer at least 1, default 1).
   - `UpdateApplicantStatusRequest`: `data.type` (must be `applicants`), `data.id` (a string equal to the bound applicant's id, case-insensitive), `data.attributes.status` (`ApplicantStatus` enum).
   - No `exists` rules, since those go through Laravel's query builder rather than Doctrine. Existence and ownership are checked in the service.
 - Input DTOs in `app/Http/Input/` (outside `app/Data`, so they stay out of the generated TypeScript): `ApplicantSummaryQueryData` (`minScore`, `pageSize`, `pageNumber`) and `UpdateApplicantStatusData` (`status`), plain laravel-data objects with no validation attributes.
@@ -183,9 +185,10 @@ Test DB: SQLite in memory. A `RefreshesDoctrineSchema` trait rebuilds the schema
 `tests/Feature/ApplicantSummaryTest.php`:
 - 200 with exact `totalApplicants`, `eligibleApplicants`, `averageAiScore`, `topTier`, list order and JSON:API content type.
 - `min_score=80` filters `data` and `meta.page.total` but leaves `meta.summary` unchanged.
+- `status` and `search` filter the same way; search ignores case, matches the email too, treats a blank term as no filter and `%`/`_` as plain characters; all filters combine and stay in the links.
 - Pagination: `page[size]=2&page[number]=2` returns the right slice, `meta.page`, and `prev`/`next`/`last` links.
 - 404 for a non-UUID campaign id, the same body as an unknown one.
-- 422 for `page[size]=0`, `page[size]=51`, `page[number]=0`, `min_score=101`, `min_score=abc`, each with the bracket-form `source.parameter`.
+- 422 for `page[size]=0`, `page[size]=51`, `page[number]=0`, `min_score=101`, `min_score=abc`, an unknown `status`, `status` or `search` as an array, and a `search` over 100 characters, each with the bracket-form `source.parameter`.
 - 404 for an unknown UUID, and for another partner's campaign.
 - 401 without a token and with a wrong token.
 - Zero applicants: 200, empty `data`, summary `0, 0, 0, []`, `lastPage` 1.
@@ -219,7 +222,7 @@ Styling is Tailwind utilities in templates. No `<style>` blocks in `.vue` files;
 - `composables/useApplicantReview.ts` (campaign id in, state and actions out):
   - Fetches on the client only (called from `onMounted`). Portal data sits behind auth and this keeps the skeleton visible on first paint.
   - State: `applicants`, `pageMeta`, `loading`, `loadError`, `minScore` (0 to 100), `page`, `pendingIds`, `actionErrors` (per applicant id).
-  - `minScore` changes are debounced 250 ms with a plain `setTimeout`, reset `page` to 1 and refetch. `min_score` is omitted when the slider is at 0, so unscored applicants show.
+  - `minScore`, `status` and the trimmed `search` changes are debounced 250 ms with a plain `setTimeout`, reset `page` to 1 and refetch. `min_score` is omitted when the slider is at 0, so unscored applicants show; `status` is omitted for all statuses and `search` when blank.
   - Responses from superseded requests are ignored (request counter), so a fast slider cannot leave stale results on screen.
   - `setStatus(id, status)`: sets the new status immediately, marks the id pending, sends the PATCH, and on failure restores the previous status and sets `actionErrors[id]`. A second click while pending is ignored.
 - `components/ApplicantReviewCard.vue` (presentational). Props: `applicant`, `pending`, `error`. Emits `update-status`.
@@ -251,6 +254,7 @@ Styling is Tailwind utilities in templates. No `<style>` blocks in `.vue` files;
 - Shows skeletons, then the applicants from the mocked endpoint.
 - Keeps the list in place, with no skeletons, while the next page loads.
 - Moving the slider to 80 sends `min_score=80` and the DOM shows only the filtered applicants.
+- Picking a status sends `status` from page 1, and all statuses leaves it out; a burst of typing sends one `search`, spaces around the term do not reload, and a blank search is left out.
 - Shortlist shows "Shortlisted" before the PATCH resolves.
 - A failing PATCH (500) restores "Pending review" and shows the error.
 - Empty response shows the empty state.

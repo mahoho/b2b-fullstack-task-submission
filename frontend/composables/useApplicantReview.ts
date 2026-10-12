@@ -17,6 +17,8 @@ export function useApplicantReview(campaignId: string) {
   const loadError = ref(false)
   const notFound = ref(false)
   const minScore = ref(0)
+  const status = ref<ApplicantStatus | ''>('')
+  const search = ref('')
   const page = ref(1)
   const pendingIds = ref(new Set<string>())
   const actionErrors = ref(new Map<string, string>())
@@ -36,12 +38,15 @@ export function useApplicantReview(campaignId: string) {
     let failed = false
 
     try {
+      const term = search.value.trim()
       const document = await $fetch<ApplicantSummaryDocumentData>(
         `/api/v1/campaigns/${encodeURIComponent(campaignId)}/applicant-summary`,
         {
           query: {
             // At 0 the filter is off. Sending min_score=0 would hide applicants the AI has not scored yet.
             ...(minScore.value > 0 ? { min_score: minScore.value } : {}),
+            ...(status.value !== '' ? { status: status.value } : {}),
+            ...(term !== '' ? { search: term } : {}),
             'page[number]': page.value,
             'page[size]': PAGE_SIZE,
           },
@@ -68,7 +73,8 @@ export function useApplicantReview(campaignId: string) {
 
   let debounce: ReturnType<typeof setTimeout> | undefined
 
-  watch(minScore, () => {
+  // The trimmed term, so spaces around it do not reload the list.
+  watch([minScore, status, () => search.value.trim()], () => {
     clearTimeout(debounce)
     debounce = setTimeout(() => {
       if (page.value === 1) load()
@@ -80,12 +86,12 @@ export function useApplicantReview(campaignId: string) {
 
   onScopeDispose(() => clearTimeout(debounce))
 
-  async function setStatus(id: string, status: ApplicantStatus): Promise<void> {
+  async function setStatus(id: string, newStatus: ApplicantStatus): Promise<void> {
     const applicant = applicants.value.find(candidate => candidate.id === id)
     if (!applicant || pendingIds.value.has(id)) return
 
     const previous = applicant.attributes.status
-    applicant.attributes.status = status
+    applicant.attributes.status = newStatus
     pendingIds.value.add(id)
     actionErrors.value.delete(id)
 
@@ -97,7 +103,7 @@ export function useApplicantReview(campaignId: string) {
       const confirmed = await $fetch<ApplicantDocumentData>(`/api/v1/applicants/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/vnd.api+json' },
-        body: { data: { type: 'applicants', id, attributes: { status } } },
+        body: { data: { type: 'applicants', id, attributes: { status: newStatus } } },
       })
       const row = current()
       if (row) row.attributes.status = confirmed.data.attributes.status
@@ -112,5 +118,5 @@ export function useApplicantReview(campaignId: string) {
     }
   }
 
-  return { applicants, pageMeta, loading, loadError, notFound, minScore, page, pendingIds, actionErrors, load, setStatus }
+  return { applicants, pageMeta, loading, loadError, notFound, minScore, status, search, page, pendingIds, actionErrors, load, setStatus }
 }

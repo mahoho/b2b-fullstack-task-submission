@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Entities\Campaign;
+use App\Enums\ApplicantStatus;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -121,6 +122,58 @@ class ApplicantSummaryTest extends TestCase
         $this->assertStringContainsString('min_score=80', $response->json('links.self'));
     }
 
+    public function test_status_filters_the_list_but_not_the_summary(): void
+    {
+        $this->seedApplicants();
+        $this->makeApplicant($this->campaign, 82, 'Joan Clarke', status: ApplicantStatus::Shortlisted);
+        $this->makeApplicant($this->campaign, 60, 'Annie Easley', status: ApplicantStatus::Rejected);
+
+        $response = $this->summary('?status=shortlisted')
+            ->assertOk()
+            ->assertJsonPath('meta.page.total', 1)
+            ->assertJsonPath('meta.summary.totalApplicants', 11);
+
+        $this->assertSame(['Joan Clarke'], $this->names($response));
+        $this->assertStringContainsString('status=shortlisted', $response->json('links.self'));
+    }
+
+    public function test_search_matches_the_name_or_the_email_ignoring_case(): void
+    {
+        $this->seedApplicants();
+
+        $this->assertSame(['Grace Hopper'], $this->names($this->summary('?search=hOPPer')->assertOk()));
+        // Only the email has a dot between the names: margaret.hamilton@example.com.
+        $this->assertSame(['Margaret Hamilton'], $this->names($this->summary('?search=margaret.hamilton')->assertOk()));
+    }
+
+    public function test_blank_search_does_not_filter(): void
+    {
+        $this->seedApplicants();
+
+        $this->summary('?search=%20%20')->assertOk()->assertJsonPath('meta.page.total', 9);
+    }
+
+    public function test_search_treats_like_wildcards_as_plain_characters(): void
+    {
+        $this->seedApplicants();
+
+        $this->summary('?search=%25')->assertOk()->assertJsonPath('meta.page.total', 0);
+        $this->summary('?search=_')->assertOk()->assertJsonPath('meta.page.total', 0);
+    }
+
+    public function test_filters_combine_and_the_links_keep_them(): void
+    {
+        $this->seedApplicants();
+        $this->makeApplicant($this->campaign, 92, 'Grace Brewster', status: ApplicantStatus::Shortlisted);
+
+        $response = $this->summary('?min_score=80&status=pending&search=grace')->assertOk();
+
+        $this->assertSame(['Grace Hopper'], $this->names($response));
+        $this->assertStringContainsString('status=pending', $response->json('links.self'));
+        $this->assertStringContainsString('search=grace', $response->json('links.self'));
+        $this->assertStringContainsString('min_score=80', $response->json('links.self'));
+    }
+
     public function test_min_score_zero_leaves_out_unscored_applicants(): void
     {
         $this->seedApplicants();
@@ -232,6 +285,10 @@ class ApplicantSummaryTest extends TestCase
             'negative min score' => ['?min_score=-1', 'min_score'],
             'min score not a number' => ['?min_score=abc', 'min_score'],
             'fractional min score' => ['?min_score=80.5', 'min_score'],
+            'unknown status' => ['?status=archived', 'status'],
+            'status as array' => ['?status[]=pending', 'status'],
+            'search as array' => ['?search[]=ada', 'search'],
+            'search over 100 characters' => ['?search='.str_repeat('a', 101), 'search'],
         ];
     }
 

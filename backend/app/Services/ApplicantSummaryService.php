@@ -33,13 +33,13 @@ class ApplicantSummaryService
             ),
         );
 
-        $total = $applicants->countFiltered($campaign, $query->minScore);
+        $total = $applicants->countFiltered($campaign, $query);
         $lastPage = max(1, (int) ceil($total / $query->pageSize));
 
         // Past the last page there is nothing to fetch, and skipping the query also keeps a huge page[number] from overflowing the offset.
         $rows = $query->pageNumber > $lastPage
             ? []
-            : $applicants->page($campaign, $query->minScore, ($query->pageNumber - 1) * $query->pageSize, $query->pageSize);
+            : $applicants->page($campaign, $query, ($query->pageNumber - 1) * $query->pageSize, $query->pageSize);
 
         return new ApplicantSummaryDocumentData(
             data: array_map(fn (Applicant $applicant) => ApplicantResourceData::fromEntity($applicant, $threshold), $rows),
@@ -51,10 +51,15 @@ class ApplicantSummaryService
     private function links(string $url, ApplicantSummaryQueryData $query, int $lastPage): PaginationLinksData
     {
         $to = function (int $number) use ($url, $query): string {
-            $params = ($query->minScore === null ? [] : ['min_score' => $query->minScore])
-                + ['page' => ['number' => $number, 'size' => $query->pageSize]];
+            $filters = ($query->minScore === null ? [] : ['min_score' => $query->minScore])
+                + ($query->status === null ? [] : ['status' => $query->status->value])
+                + ($query->search === null ? [] : ['search' => $query->search]);
 
-            return $url.'?'.urldecode(http_build_query($params));
+            // Filter values stay percent-encoded, so a search containing & or # cannot break the link. Only the page brackets are literal.
+            $queryString = http_build_query($filters, '', '&', PHP_QUERY_RFC3986);
+            $paging = "page[number]={$number}&page[size]={$query->pageSize}";
+
+            return $url.'?'.($queryString === '' ? '' : $queryString.'&').$paging;
         };
 
         return new PaginationLinksData(
