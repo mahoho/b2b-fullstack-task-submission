@@ -28,6 +28,10 @@ test('loading the next page shows the loading bar and keeps the list in place', 
   await expect(bar).toBeVisible()
   await expect(page.getByTestId('skeleton')).toHaveCount(0)
   expect(await first.boundingBox()).toEqual(before)
+  // The bar is the only loading signal: the list is not dimmed, so a fast reload does not flicker.
+  await expect(page.getByRole('list').first()).toHaveCSS('opacity', '1')
+  const sliderBlue = await page.getByLabel('Minimum AI score').evaluate(element => getComputedStyle(element).accentColor)
+  await expect(bar).toHaveCSS('background-color', sliderBlue)
 
   release()
   await expect(bar).toBeHidden()

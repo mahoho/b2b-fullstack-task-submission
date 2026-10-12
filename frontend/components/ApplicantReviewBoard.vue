@@ -94,8 +94,7 @@ const emptyMessage = computed(() => minScore.value > 0
 
     <ul
       v-else
-      class="space-y-4 transition-opacity"
-      :class="{ 'opacity-60': loading }"
+      class="space-y-4"
       :aria-busy="loading"
     >
       <li
